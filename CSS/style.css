@@ -1,1 +1,44 @@
-body{background:#f5f1e8;font-family:Arial}.navbar,.btn-crepa{background:#b86d2c!important;color:white!important}.card{border:0;border-radius:15px;box-shadow:0 3px 12px #0002}.titulo{color:#b86d2c}.hero{background:#fff5e8;border-radius:20px;padding:65px 20px}.table-responsive{background:white;border-radius:12px;padding:10px}footer{text-align:center;padding:25px;color:#806b5c}@media(max-width:600px){.hero{padding:30px 10px}}
+body {
+    background: #f5f1e8;
+    font-family: Arial, Helvetica, sans-serif
+}
+
+.navbar,
+.btn-crepa {
+    background: #b86d2c !important;
+    color: white !important
+}
+
+.card {
+    border: 0;
+    border-radius: 15px;
+    box-shadow: 0 3px 12px #0002
+}
+
+.titulo {
+    color: #b86d2c
+}
+
+.hero {
+    background: #fff5e8;
+    border-radius: 20px;
+    padding: 65px 20px
+}
+
+.table-responsive {
+    background: white;
+    border-radius: 12px;
+    padding: 10px
+}
+
+footer {
+    text-align: center;
+    padding: 25px;
+    color: #806b5c
+}
+
+@media(max-width:600px) {
+    .hero {
+        padding: 30px 10px
+    }
+}
