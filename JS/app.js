@@ -137,28 +137,49 @@ function costo(z) {
 
 function comprar(e) {
     e.preventDefault();
+    let form = document.getElementById("compra");
+    let valido = true;
+
+    // Forzamos la validación visual en todos los campos requeridos
+    form.querySelectorAll("input[required]").forEach((input) => {
+        if (!input.checkValidity()) {
+            input.classList.add("is-invalid");
+            input.classList.remove("is-valid");
+            valido = false;
+        } else {
+            input.classList.remove("is-invalid");
+            input.classList.add("is-valid");
+        }
+    });
+
+    if (!valido) return; // Si hay errores, detiene la compra
+
+    // Si todo está bien, capturamos los datos
+    let nombre = document.getElementById("cli-nombre").value.trim();
+    let correo = document.getElementById("cli-correo").value.trim();
+    let telefono = document.getElementById("cli-telefono").value.trim();
+
     let err = pedido(
-        "Cliente",
+        nombre,
+        correo,
+        telefono,
         carrito,
         document.getElementById("zona").value,
         document.getElementById("direccion").value,
     );
+
     if (err) return avisar(err);
+
     carrito = [];
     avisar("Pedido registrado exitosamente");
     location.reload();
 }
 
-function pedido(cliente, items, z, dir) {
+function pedido(cliente, correo, telefono, items, z, dir) {
     let d = datos();
     if (!items.length) return "Agrega productos al carrito";
     if (z !== "Retiro en tienda" && !dir.trim()) return "Falta dirección";
 
-    // 1. Sumar cuánto se necesita de cada ingrediente en TODO el pedido.
-    //    Antes se validaba cada crepa del carrito por separado contra el
-    //    stock original, así que dos crepas que usaran el mismo ingrediente
-    //    podían "pasar" la validación aunque juntas superaran el stock
-    //    disponible (y el stock podía terminar en negativo).
     let demanda = {};
     for (let i of items) {
         for (let id of i.elementosBase) {
@@ -166,14 +187,12 @@ function pedido(cliente, items, z, dir) {
         }
     }
 
-    // 2. Validar existencias contra la demanda total ya sumada
     for (let id in demanda) {
         let p = d.productos.find((x) => x.id === Number(id));
         if (!p || p.stock < demanda[id])
             return `Sin existencias suficientes de: ${p ? p.nombre : "ingrediente"}`;
     }
 
-    // 3. Descontar del inventario y calcular total
     let subtotal = 0;
     let detalle = items.map((i) => {
         i.elementosBase.forEach((id) => {
@@ -191,7 +210,9 @@ function pedido(cliente, items, z, dir) {
 
     d.pedidos.push({
         id: d.numero++,
-        cliente,
+        cliente: cliente, // Nombre real ingresado
+        correo: correo, // Correo ingresado
+        telefono: telefono, // Teléfono ingresado
         items: detalle,
         total: Math.round((subtotal + costo(z)) * 100) / 100,
         entrega: z,
@@ -340,7 +361,9 @@ function reabastecer(id) {
     if (!p) return;
     p.stock += cant;
     guardar(d);
-    avisar(`Se agregaron ${cant} unidades a ${p.nombre}. Stock actual: ${p.stock}.`);
+    avisar(
+        `Se agregaron ${cant} unidades a ${p.nombre}. Stock actual: ${p.stock}.`,
+    );
     contenido();
 }
 
@@ -410,11 +433,40 @@ function contenido() {
                     <div class="card p-4 shadow-sm border-0">
                         <h3>Mi Carrito</h3>
                         <div id="carrito"></div>
-                        <form id="compra" class="mt-4">
+                        <form id="compra" class="mt-4" novalidate>
+                            <h5 class="mb-3">Datos de contacto</h5>
+
+                            <div class="mb-3">
+                                <label for="cli-nombre" class="form-label">Nombre completo</label>
+                                <input type="text" id="cli-nombre" class="form-control" placeholder="Ej. Juan Pérez" 
+                                    required pattern="^[a-zA-ZáéíóúÁÉÍÓÚñÑ\\s]+$"
+                                    onfocus="this.placeholder=''" onblur="this.placeholder='Ej. Juan Pérez'">
+                                <div class="invalid-feedback">Por favor, ingresa solo letras y espacios.</div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="cli-correo" class="form-label">Correo electrónico</label>
+                                <input type="email" id="cli-correo" class="form-control" placeholder="Ej. correo@ejemplo.com" 
+                                    required
+                                    onfocus="this.placeholder=''" onblur="this.placeholder='Ej. correo@ejemplo.com'">
+                                <div class="invalid-feedback">Ingresa un correo válido (ejemplo@dominio.com).</div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="cli-telefono" class="form-label">Teléfono</label>
+                                <input type="tel" id="cli-telefono" class="form-control" placeholder="Ej. 7777-7777" 
+                                    required pattern="^\\d{4}-\\d{4}$"
+                                    onfocus="this.placeholder=''" onblur="this.placeholder='Ej. 7777-7777'">
+                                <div class="invalid-feedback">El teléfono debe tener el formato 7777-7777.</div>
+
+                            </div>
+
                             <label for="zona">Entrega</label>
                             <select id="zona" class="form-select mb-3">${zonas()}</select>
+                            
                             <label for="direccion">Dirección</label>
                             <input id="direccion" class="form-control mb-3">
+                            
                             <button class="btn btn-success w-100 fw-bold">Confirmar Pedido</button>
                         </form>
                     </div>
@@ -423,12 +475,29 @@ function contenido() {
         mostrarCarrito();
         document.getElementById("form-crepa").onsubmit = armarCrepa;
         document.getElementById("compra").onsubmit = comprar;
+
+        // --- NUEVO BLOQUE DE VALIDACIÓN EN TIEMPO REAL ---
+        document.querySelectorAll("#compra input[required]").forEach((input) => {
+            input.addEventListener("input", function () {
+                if (this.checkValidity()) {
+                    this.classList.remove("is-invalid");
+                    this.classList.add("is-valid"); // Pinta de verde y pone el check
+                } else {
+                    this.classList.remove("is-valid");
+                    this.classList.add("is-invalid"); // Pinta de rojo y pone el símbolo
+                }
+            });
+        });
     }
 
     if (p === "mis") {
         a.innerHTML = `<h1 class="titulo">Mis pedidos</h1>
             ${d.pedidos
-                .filter((x) => x.cliente === "Cliente")
+                .filter(
+                    (x) =>
+                        x.correo === sesion()?.correo ||
+                        sesion()?.rol === "cliente",
+                )
                 .sort((a, b) => b.id - a.id)
                 .map(
                     (x) => `
@@ -452,7 +521,10 @@ function contenido() {
             ["Pendiente", "En preparación"].includes(x.estado),
         ).length;
         let stockBajo = d.productos.filter((x) => x.stock <= x.min);
-        let ultimos = d.pedidos.slice().sort((a, b) => b.id - a.id).slice(0, 5);
+        let ultimos = d.pedidos
+            .slice()
+            .sort((a, b) => b.id - a.id)
+            .slice(0, 5);
 
         a.innerHTML = `
             <h1 class="titulo mb-4">Resumen</h1>
@@ -490,9 +562,7 @@ function contenido() {
                 ? `<div class="table-responsive">
                                 <table class="table table-sm align-middle mb-0">
                                     <thead><tr><th>#</th><th>Cliente</th><th>Total</th><th>Estado</th></tr></thead>
-                                    <tbody>
-                                        ${ultimos.map((x) => `<tr><td>#${x.id}</td><td>${escapar(x.cliente)}</td><td>${precio(x.total)}</td><td><span class="badge text-bg-${colorEstado(x.estado)}">${escapar(x.estado)}</span></td></tr>`).join("")}
-                                    </tbody>
+                                    <tbody>${ultimos.map((x) => `<tr><td>#${x.id}</td><td>${escapar(x.cliente)}</td><td>${precio(x.total)}</td><td><span class="badge text-bg-${colorEstado(x.estado)}">${escapar(x.estado)}</span></td></tr>`).join("")}</tbody>
                                 </table>
                             </div>`
                 : '<p class="text-muted mb-0">Todavía no hay pedidos.</p>'
@@ -695,7 +765,14 @@ function contenido() {
                     <div class="card p-3 shadow-sm border-0">
                         <h5 class="mb-3">Pedidos por estado</h5>
                         ${Object.keys(estadosPedidos).length
-                ? `<div class="d-flex flex-wrap gap-2">${Object.entries(estadosPedidos).map(([e, c]) => `<span class="badge text-bg-${colorEstado(e)} fs-6 p-2">${escapar(e)}: ${c}</span>`).join("")}</div>`
+                ? `<div class="d-flex flex-wrap gap-2">${Object.entries(
+                    estadosPedidos,
+                )
+                    .map(
+                        ([e, c]) =>
+                            `<span class="badge text-bg-${colorEstado(e)} fs-6 p-2">${escapar(e)}: ${c}</span>`,
+                    )
+                    .join("")}</div>`
                 : '<p class="text-muted mb-0">Todavía no hay pedidos.</p>'
             }
                     </div>
@@ -740,16 +817,17 @@ function contenido() {
 
 function actualizarMisPedidos() {
     let d = datos();
-    
+
     // Filtramos los pedidos del cliente que NO estén entregados ni cancelados
-    let pedidosActivos = d.pedidos.filter(x => 
-        x.cliente === "Cliente" && 
-        x.estado !== "Entregado" && 
-        x.estado !== "Cancelado"
+    let pedidosActivos = d.pedidos.filter(
+        (x) =>
+            x.cliente === "Cliente" &&
+            x.estado !== "Entregado" &&
+            x.estado !== "Cancelado",
     );
-    
+
     let badge = document.getElementById("badge-pedidos");
-    
+
     if (badge) {
         if (pedidosActivos.length > 0) {
             badge.textContent = pedidosActivos.length;
