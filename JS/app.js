@@ -121,6 +121,8 @@ function mostrarCarrito() {
     `,
             )
             .join("") || "<p>Carrito vacío</p>";
+
+        calcularTotal();
 }
 
 function quitar(idTemporal) {
@@ -399,14 +401,43 @@ function contenido() {
         let bases = d.productos.filter((x) => x.categoria === "base");
         let ingredientes = d.productos.filter((x) => x.categoria === "ingrediente");
         let cubiertas = d.productos.filter((x) => x.categoria === "cubierta");
+        
+        // Filtramos las crepas prearmadas para el catálogo
+        let prearmadas = d.productos.filter((x) => x.categoria === "prearmada");
 
         a.innerHTML = `
-            <h1 class="titulo mb-4">Arma tu Crepa</h1>
+            <div class="d-flex justify-content-between align-items-end mb-3 mt-2">
+                <h2 class="titulo mb-0">Catálogo de crepas</h2>
+            </div>
+
+            <!-- INICIO DE LAS CARDS -->
+            <div class="row mb-5">
+                ${prearmadas.map(c => `
+                    <div class="col-md-4 mb-4">
+                        <div class="card h-100 shadow-sm border-0">
+                            <div class="catalogo-top-bg">
+                                <span style="font-size: 60px;">${c.emoji || '🥞'}</span>
+                            </div>
+                            <div class="card-body d-flex flex-column">
+                                <h5 class="card-title fw-bold mb-1">${escapar(c.nombre)}</h5>
+                                <p class="text-muted small mb-3">Disponibles: ${c.stock}</p>
+                                <div class="d-flex justify-content-between align-items-center mt-auto">
+                                    <span class="fs-5 fw-bold">${precio(c.precio)}</span>
+                                    <button class="btn btn-crepa btn-sm rounded-pill px-3" onclick="agregarDesdeCatalogo(${c.id})">+ Agregar</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+            <!-- FIN DE LAS CARDS -->
+
+            <h2 class="titulo mb-4 mt-5">Arma tu Crepa</h2>
             <div class="row g-4">
                 <div class="col-md-7">
                     <form id="form-crepa" class="card p-4 shadow-sm border-0">
                         <h5 class="mb-3">1. Base</h5>
-                        <select id="sel-base" class="form-select mb-4">
+                        <select id="sel-base" class="form-select mb-4 w-100">
                             ${bases.map((x) => `<option value="${x.id}">${escapar(x.nombre)} - ${precio(x.precio)}</option>`).join("")}
                         </select>
                         <h5 class="mb-3">2. Ingredientes (Máx 2)</h5>
@@ -423,7 +454,7 @@ function contenido() {
                 .join("")}
                         </div>
                         <h5 class="mb-3">3. Cubierta</h5>
-                        <select id="sel-cubierta" class="form-select mb-4">
+                        <select id="sel-cubierta" class="form-select mb-4 w-100">
                             ${cubiertas.map((x) => `<option value="${x.id}">${escapar(x.nombre)} - ${precio(x.precio)}</option>`).join("")}
                         </select>
                         <button type="submit" class="btn btn-crepa w-100">Agregar al carrito</button>
@@ -433,6 +464,25 @@ function contenido() {
                     <div class="card p-4 shadow-sm border-0">
                         <h3>Mi Carrito</h3>
                         <div id="carrito"></div>
+
+                        <div id="resumen-total" class="mt-3 border-top pt-3 d-none">
+                            <div class="d-flex justify-content-between mb-1 text-muted small">
+                                <span>Subtotal:</span>
+                                <span id="lbl-subtotal">$0.00</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2 text-muted small">
+                                <span>Costo de envío:</span>
+                                <span id="lbl-envio">$0.00</span>
+                            </div>
+                            <div class="d-flex justify-content-between fs-5 fw-bold">
+                                <span>Total a pagar:</span>
+                                <span id="lbl-total" class="text-success">$0.00</span>
+                            </div>
+                        </div>
+                        <!-- FIN DEL BLOQUE DE TOTALES -->
+
+                        <form id="compra" class="mt-4" novalidate>
+
                         <form id="compra" class="mt-4" novalidate>
                             <h5 class="mb-3">Datos de contacto</h5>
 
@@ -462,7 +512,7 @@ function contenido() {
                             </div>
 
                             <label for="zona">Entrega</label>
-                            <select id="zona" class="form-select mb-3">${zonas()}</select>
+                            <select id="zona" class="form-select mb-3 w-100">${zonas()}</select>
                             
                             <label for="direccion">Dirección</label>
                             <input id="direccion" class="form-control mb-3">
@@ -476,18 +526,20 @@ function contenido() {
         document.getElementById("form-crepa").onsubmit = armarCrepa;
         document.getElementById("compra").onsubmit = comprar;
 
-        // --- NUEVO BLOQUE DE VALIDACIÓN EN TIEMPO REAL ---
+        // Validación en tiempo real
         document.querySelectorAll("#compra input[required]").forEach((input) => {
             input.addEventListener("input", function () {
                 if (this.checkValidity()) {
                     this.classList.remove("is-invalid");
-                    this.classList.add("is-valid"); // Pinta de verde y pone el check
+                    this.classList.add("is-valid");
                 } else {
                     this.classList.remove("is-valid");
-                    this.classList.add("is-invalid"); // Pinta de rojo y pone el símbolo
+                    this.classList.add("is-invalid");
                 }
             });
         });
+
+        document.getElementById("zona").addEventListener("change", calcularTotal);
     }
 
     if (p === "mis") {
@@ -817,13 +869,16 @@ function contenido() {
 
 function actualizarMisPedidos() {
     let d = datos();
+    let u = sesion();
 
-    // Filtramos los pedidos del cliente que NO estén entregados ni cancelados
+    if (!u) return; // Si no hay sesión, no hacemos nada
+
+    // Filtramos los pedidos que sean del usuario actual y que NO estén entregados ni cancelados
     let pedidosActivos = d.pedidos.filter(
         (x) =>
-            x.cliente === "Cliente" &&
+            (x.correo === u.correo || u.rol === "cliente") &&
             x.estado !== "Entregado" &&
-            x.estado !== "Cancelado",
+            x.estado !== "Cancelado"
     );
 
     let badge = document.getElementById("badge-pedidos");
@@ -833,13 +888,74 @@ function actualizarMisPedidos() {
             badge.textContent = pedidosActivos.length;
             badge.classList.remove("d-none"); // Muestra el circulito
         } else {
-            badge.classList.add("d-none"); // Lo oculta si ya no hay pedidos activos
+            badge.classList.add("d-none"); // Lo oculta si no hay pedidos activos
         }
     }
 }
+
+function agregarDesdeCatalogo(id) {
+    let d = datos();
+    let p = d.productos.find(x => x.id === id);
+
+    if (!p) return avisar("Producto no encontrado");
+    if (p.stock < 1) return avisar("Sin existencias de este producto");
+
+    carrito.push({
+        idTemporal: Date.now(),
+        descripcion: p.nombre,
+        precioUnitario: p.precio,
+        elementosBase: [p.id], // Esto hace que funcione tu lógica de stock
+        cantidad: 1
+    });
+
+    mostrarCarrito();
+    avisar(`¡${p.nombre} agregado al carrito!`);
+}
+
+function calcularTotal() {
+    // 1. Sumamos el precio de los productos en el carrito
+    let subtotal = carrito.reduce((sum, item) => sum + (item.precioUnitario * item.cantidad), 0);
+    
+    // 2. Obtenemos la zona seleccionada y calculamos su costo
+    let zonaSelect = document.getElementById("zona");
+    let envio = 0;
+    
+    if (zonaSelect) {
+        envio = costo(zonaSelect.value);
+    }
+
+    let total = subtotal + envio;
+
+    // 3. Actualizamos la interfaz gráfica
+    let resumen = document.getElementById("resumen-total");
+    if (resumen) {
+        if (carrito.length > 0) {
+            resumen.classList.remove("d-none"); // Mostrar el cuadro si hay productos
+            document.getElementById("lbl-subtotal").textContent = precio(subtotal);
+            document.getElementById("lbl-envio").textContent = precio(envio);
+            document.getElementById("lbl-total").textContent = precio(total);
+        } else {
+            resumen.classList.add("d-none"); // Ocultarlo si el carrito está vacío
+        }
+    }
+}
+
 // Inicializar
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
+    // Intentar cargar desde JSON si el localStorage está vacío
+    if (!localStorage.getItem(llave)) {
+        try {
+            // Usamos "base" de ui.js para que funcione en index y en CLIENTE
+            let respuesta = await fetch(base + 'Datos/productos.json'); 
+            let data = await respuesta.json();
+            localStorage.setItem(llave, JSON.stringify(data));
+        } catch (error) {
+            console.log("No se pudo cargar el JSON, usando datos por defecto.");
+            // Si falla (ej. por abrir el archivo directo sin servidor), usa el objeto 'inicio'
+            localStorage.setItem(llave, JSON.stringify(inicio));
+        }
+    }
     menu();
     contenido();
-    actualizarMisPedidos(); // <--- Agrega esta línea aquí
+    actualizarMisPedidos();
 });

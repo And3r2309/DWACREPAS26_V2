@@ -42,3 +42,47 @@ footer {
         padding: 30px 10px
     }
 }
+
+/* Estilos para el Catálogo de Crepas */
+.catalogo-top-bg {
+    background-color: #f8eee4;
+    border-radius: 15px 15px 0 0;
+    text-align: center;
+    padding: 30px 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.card {
+    transition: transform 0.2s ease-in-out;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+}
+
+/* Evita que CUALQUIER elemento se salga de la pantalla en móvil */
+* {
+    box-sizing: border-box;
+}
+
+html, body {
+    overflow-x: hidden;
+    max-width: 100%;
+}
+
+/* Reemplaza tu regla .form-select actual por esta */
+.form-select {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+/* Si el texto del select (nombre + precio) sigue viéndose apretado en pantallas chicas */
+@media (max-width: 400px) {
+    .form-select {
+        font-size: 0.9rem;
+        padding-right: 1.75rem; /* deja espacio a la flechita del select */
+    }
+}
