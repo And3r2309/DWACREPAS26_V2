@@ -52,6 +52,7 @@ const inicio = {
         },
     ],
     pedidos: [],
+    movimientos: [],
     numero: 1,
 };
 
@@ -70,6 +71,8 @@ function guardar(d) {
 }
 
 let carrito = [];
+function registrarMovimiento(d,p,cantidad,tipo,referencia){(d.movimientos ||= []).push({fecha:new Date().toISOString(),producto:p.nombre,tipo,cantidad,referencia,stockFinal:p.stock});}
+
 
 function armarCrepa(e) {
     e.preventDefault();
@@ -106,6 +109,7 @@ function armarCrepa(e) {
     });
     mostrarCarrito();
     document.getElementById("form-crepa").reset();
+    actualizarVistaCrepa();
 }
 
 function mostrarCarrito() {
@@ -179,6 +183,7 @@ function pedido(cliente, items, z, dir) {
         i.elementosBase.forEach((id) => {
             let p = d.productos.find((x) => x.id === id);
             p.stock -= i.cantidad;
+            registrarMovimiento(d,p,-i.cantidad,"Venta","Pedido #"+d.numero);
         });
         subtotal += i.precioUnitario * i.cantidad;
         return {
@@ -193,6 +198,7 @@ function pedido(cliente, items, z, dir) {
         id: d.numero++,
         cliente,
         items: detalle,
+        consumos: demanda,
         total: Math.round((subtotal + costo(z)) * 100) / 100,
         entrega: z,
         direccion: dir,
@@ -284,6 +290,7 @@ function guardarProducto(e) {
         return avisar("El stock y el mínimo no pueden ser negativos");
 
     let d = datos();
+    const stockAnterior = id ? (d.productos.find(x=>x.id===Number(id))?.stock ?? 0) : 0;
     if (id) {
         let p = d.productos.find((x) => x.id === Number(id));
         if (p) {
@@ -306,6 +313,8 @@ function guardarProducto(e) {
             min: minNuevo,
         });
     }
+    const editado = id ? d.productos.find(x=>x.id===Number(id)) : d.productos[d.productos.length-1];
+    if(editado && editado.stock!==stockAnterior) registrarMovimiento(d,editado,editado.stock-stockAnterior,"Ajuste","Edición de producto");
     guardar(d);
 
     // Esperamos a que el modal termine de cerrarse (evento hidden.bs.modal)
@@ -339,6 +348,7 @@ function reabastecer(id) {
     let p = d.productos.find((x) => x.id === id);
     if (!p) return;
     p.stock += cant;
+    registrarMovimiento(d,p,cant,"Entrada","Reabastecimiento");
     guardar(d);
     avisar(`Se agregaron ${cant} unidades a ${p.nombre}. Stock actual: ${p.stock}.`);
     contenido();
@@ -350,6 +360,15 @@ function cambiarEstado(id, nuevo) {
     let d = datos();
     let ped = d.pedidos.find((x) => x.id === id);
     if (!ped) return;
+    if (ped.estado === nuevo) return;
+    if (nuevo === "Cancelado") {
+        if (!ped.consumos) return avisar("Pedido antiguo sin detalle de consumos: ajusta inventario manualmente antes de cancelar.");
+        for (const [id,cantidad] of Object.entries(ped.consumos)) {
+            const p = d.productos.find(x=>x.id===Number(id));
+            if(p){p.stock+=cantidad;registrarMovimiento(d,p,cantidad,"Devolución","Pedido #"+ped.id);}
+        }
+    }
+    if (ped.estado === "Cancelado") return avisar("No se puede reactivar un pedido cancelado.");
     ped.estado = nuevo;
     guardar(d);
     contenido();
@@ -403,6 +422,7 @@ function contenido() {
                         <select id="sel-cubierta" class="form-select mb-4">
                             ${cubiertas.map((x) => `<option value="${x.id}">${escapar(x.nombre)} - ${precio(x.precio)}</option>`).join("")}
                         </select>
+                        <div id="vista-crepa" class="vista-crepa text-center mb-4" aria-live="polite"></div>
                         <button type="submit" class="btn btn-crepa w-100">Agregar al carrito</button>
                     </form>
                 </div>
@@ -421,6 +441,8 @@ function contenido() {
                 </div>
             </div>`;
         mostrarCarrito();
+        document.getElementById("form-crepa").addEventListener("change",actualizarVistaCrepa);
+        actualizarVistaCrepa();
         document.getElementById("form-crepa").onsubmit = armarCrepa;
         document.getElementById("compra").onsubmit = comprar;
     }
@@ -594,7 +616,7 @@ function contenido() {
     if (p === "inventario") {
         let bajo = d.productos.filter((x) => x.stock <= x.min);
         a.innerHTML = `
-            <h1 class="titulo mb-4">Inventario</h1>
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4"><h1 class="titulo mb-0">Inventario</h1><div class="d-flex gap-2"><button class="btn btn-outline-secondary btn-sm" onclick="exportarInventario()">CSV</button><button class="btn btn-outline-secondary btn-sm" onclick="exportarMovimientos()">Movimientos CSV</button><button class="btn btn-crepa btn-sm" onclick="imprimirReporte('inventario')">PDF / Imprimir</button></div></div>
             ${bajo.length
                 ? `<div class="alert alert-warning">⚠️ ${bajo.length} producto${bajo.length > 1 ? "s" : ""} con poco stock o agotado${bajo.length > 1 ? "s" : ""}.</div>`
                 : ""
@@ -623,7 +645,11 @@ function contenido() {
                 .join("")}
                     </tbody>
                 </table>
-            </div>`;
+            </div>
+            <h2 class="h5 titulo mt-4">Historial de movimientos</h2>
+            <div class="table-responsive"><table class="table table-sm"><thead><tr><th>Fecha</th><th>Producto</th><th>Tipo</th><th>Cantidad</th><th>Referencia</th><th>Stock final</th></tr></thead><tbody>
+            ${(d.movimientos||[]).slice(-20).reverse().map(m=>'<tr><td>'+formatearFecha(m.fecha)+'</td><td>'+escapar(m.producto)+'</td><td>'+escapar(m.tipo)+'</td><td>'+m.cantidad+'</td><td>'+escapar(m.referencia)+'</td><td>'+m.stockFinal+'</td></tr>').join('') || '<tr><td colspan="6">Sin movimientos registrados</td></tr>'}
+            </tbody></table></div>`;
     }
 
     if (p === "ventas") {
@@ -645,7 +671,7 @@ function contenido() {
         });
 
         a.innerHTML = `
-            <h1 class="titulo mb-4">Ventas</h1>
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4"><h1 class="titulo mb-0">Ventas</h1><div class="d-flex gap-2"><button class="btn btn-outline-secondary btn-sm" onclick="exportarVentas()">CSV</button><button class="btn btn-crepa btn-sm" onclick="imprimirReporte('ventas')">PDF / Imprimir</button></div></div>
             <div class="row g-3 mb-4">
                 <div class="col-6 col-md-3">
                     <div class="card p-3 text-center shadow-sm border-0">
@@ -736,6 +762,31 @@ function contenido() {
                 : '<p class="text-muted">Todavía no hay pedidos.</p>'
             }`;
     }
+}
+
+
+function actualizarVistaCrepa(){
+ const vista=document.getElementById('vista-crepa');if(!vista)return;
+ const d=datos(), ids=[Number(document.getElementById('sel-base').value),Number(document.getElementById('sel-cubierta').value),...Array.from(document.querySelectorAll('.chk-ingrediente:checked'),x=>Number(x.value))];
+ const productos=ids.map(id=>d.productos.find(p=>p.id===id)).filter(Boolean);
+ vista.innerHTML='<div class="crepa-ilustracion" role="img" aria-label="Ilustración de una crepa"><span class="crepa-disco"></span><span class="crepa-doblez"></span></div><p class="mb-1">'+escapar(productos.map(p=>p.nombre).join(' · '))+'</p><strong class="fs-4 titulo">'+precio(productos.reduce((s,p)=>s+p.precio,0))+'</strong><p class="small text-muted mb-0">Vista ilustrativa</p>';
+}
+function descargarCSV(nombre,filas){
+ const csv='\uFEFF'+filas.map(f=>f.map(v=>'"'+String(v??'').replace(/"/g,'""').replace(/^[=+@\-\t\r]/,"'// Inicializar")+'"').join(';')).join('\r\n');
+ const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+ const a=document.createElement('a');a.href=url;a.download=nombre;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+function exportarInventario(){descargarCSV('inventario.csv',[['Producto','Categoría','Stock','Mínimo','Precio'],...datos().productos.map(p=>[p.nombre,p.categoria,p.stock,p.min,p.precio])]);}
+function exportarMovimientos(){descargarCSV('movimientos.csv',[['Fecha','Producto','Tipo','Cantidad','Referencia','Stock final'],...(datos().movimientos||[]).map(m=>[m.fecha,m.producto,m.tipo,m.cantidad,m.referencia,m.stockFinal])]);}
+function exportarVentas(){descargarCSV('ventas.csv',[['Pedido','Fecha','Cliente','Estado','Entrega','Total'],...datos().pedidos.map(p=>[p.id,p.fecha,p.cliente,p.estado,p.entrega,p.total])]);}
+function imprimirReporte(tipo){
+ const d=datos(), inv=tipo==='inventario', cab=inv?['Producto','Stock','Mínimo','Precio']:['Pedido','Fecha','Estado','Total'];
+ const filas=inv?d.productos.map(p=>[p.nombre,p.stock,p.min,precio(p.precio)]):d.pedidos.map(p=>[p.id,formatearFecha(p.fecha),p.estado,precio(p.total)]);
+ const w=window.open('','_blank');if(!w)return avisar('Habilita las ventanas emergentes para imprimir.');
+ const th=cab.map(x=>'<th>'+escapar(x)+'</th>').join('');
+ const tr=filas.map(f=>'<tr>'+f.map(x=>'<td>'+escapar(x)+'</td>').join('')+'</tr>').join('');
+ w.document.write('<!doctype html><html lang="es"><meta charset="utf-8"><title>Reporte CrepasVibes</title><style>body{font:14px Arial;margin:30px}table{border-collapse:collapse;width:100%}td,th{border:1px solid #ddd;padding:8px}th{background:#f5e4ce}</style><h1>CrepasVibes - '+(inv?'Inventario':'Ventas')+'</h1><table><thead><tr>'+th+'</tr></thead><tbody>'+tr+'</tbody></table></html>');
+ w.document.close();w.focus();w.print();
 }
 
 // Inicializar
