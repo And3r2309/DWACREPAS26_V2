@@ -1,402 +1,430 @@
 // JS/app.js
 const llave = "crepasvibes_v2";
 const inicio = {
-    productos: [
-        {
-            id: 1,
-            nombre: "Base Tradicional",
-            precio: 2.5,
-            stock: 50,
-            min: 10,
-            categoria: "base",
-        },
-        {
-            id: 2,
-            nombre: "Base Avena",
-            precio: 3.0,
-            stock: 40,
-            min: 10,
-            categoria: "base",
-        },
-        {
-            id: 3,
-            nombre: "Fresa",
-            precio: 0.5,
-            stock: 30,
-            min: 5,
-            categoria: "ingrediente",
-        },
-        {
-            id: 4,
-            nombre: "Plátano",
-            precio: 0.5,
-            stock: 30,
-            min: 5,
-            categoria: "ingrediente",
-        },
-        {
-            id: 5,
-            nombre: "Nutella",
-            precio: 1.0,
-            stock: 20,
-            min: 5,
-            categoria: "cubierta",
-        },
-        {
-            id: 6,
-            nombre: "Lechera",
-            precio: 0.75,
-            stock: 20,
-            min: 5,
-            categoria: "cubierta",
-        },
-    ],
-    pedidos: [],
-    movimientos: [],
-    numero: 1,
+  productos: [
+    {
+      id: 1,
+      nombre: "Base Tradicional",
+      precio: 2.5,
+      stock: 50,
+      min: 10,
+      categoria: "base",
+    },
+    {
+      id: 2,
+      nombre: "Base Avena",
+      precio: 3.0,
+      stock: 40,
+      min: 10,
+      categoria: "base",
+    },
+    {
+      id: 3,
+      nombre: "Fresa",
+      precio: 0.5,
+      stock: 30,
+      min: 5,
+      categoria: "ingrediente",
+    },
+    {
+      id: 4,
+      nombre: "Plátano",
+      precio: 0.5,
+      stock: 30,
+      min: 5,
+      categoria: "ingrediente",
+    },
+    {
+      id: 5,
+      nombre: "Nutella",
+      precio: 1.0,
+      stock: 20,
+      min: 5,
+      categoria: "cubierta",
+    },
+    {
+      id: 6,
+      nombre: "Lechera",
+      precio: 0.75,
+      stock: 20,
+      min: 5,
+      categoria: "cubierta",
+    },
+  ],
+  pedidos: [],
+  movimientos: [],
+  numero: 1,
 };
 
 function datos() {
-    try {
-        return (
-            JSON.parse(localStorage.getItem(llave)) ||
-            JSON.parse(JSON.stringify(inicio))
-        );
-    } catch (e) {
-        return JSON.parse(JSON.stringify(inicio));
-    }
+  try {
+    return (
+      JSON.parse(localStorage.getItem(llave)) ||
+      JSON.parse(JSON.stringify(inicio))
+    );
+  } catch (e) {
+    return JSON.parse(JSON.stringify(inicio));
+  }
 }
 function guardar(d) {
-    localStorage.setItem(llave, JSON.stringify(d));
+  localStorage.setItem(llave, JSON.stringify(d));
 }
 
 let carrito = [];
-function registrarMovimiento(d,p,cantidad,tipo,referencia){(d.movimientos ||= []).push({fecha:new Date().toISOString(),producto:p.nombre,tipo,cantidad,referencia,stockFinal:p.stock});}
-
+function registrarMovimiento(d, p, cantidad, tipo, referencia) {
+  (d.movimientos ||= []).push({
+    fecha: new Date().toISOString(),
+    producto: p.nombre,
+    tipo,
+    cantidad,
+    referencia,
+    stockFinal: p.stock,
+  });
+}
 
 function armarCrepa(e) {
-    e.preventDefault();
-    let d = datos();
-    let idBase = Number(document.getElementById("sel-base").value);
-    let idCubierta = Number(document.getElementById("sel-cubierta").value);
-    let chks = Array.from(
-        document.querySelectorAll(".chk-ingrediente:checked"),
-    ).map((x) => Number(x.value));
+  e.preventDefault();
+  let d = datos();
+  let idBase = Number(document.getElementById("sel-base").value);
+  let idCubierta = Number(document.getElementById("sel-cubierta").value);
+  let chks = Array.from(
+    document.querySelectorAll(".chk-ingrediente:checked"),
+  ).map((x) => Number(x.value));
 
-    if (chks.length > 2)
-        return avisar("Solo puedes seleccionar un máximo de 2 ingredientes extra.");
+  if (chks.length > 2)
+    return avisar("Solo puedes seleccionar un máximo de 2 ingredientes extra.");
 
-    let itemsSeleccionados = [idBase, idCubierta, ...chks];
-    let nombresItems = [];
-    let totalPrecio = 0;
+  let itemsSeleccionados = [idBase, idCubierta, ...chks];
+  let nombresItems = [];
+  let totalPrecio = 0;
 
-    for (let id of itemsSeleccionados) {
-        let p = d.productos.find((x) => x.id === id);
-        if (!p || p.stock < 1)
-            return avisar(
-                `Sin existencias de: ${p ? p.nombre : "Elemento desconocido"}`,
-            );
-        nombresItems.push(p.nombre);
-        totalPrecio += p.precio;
-    }
+  for (let id of itemsSeleccionados) {
+    let p = d.productos.find((x) => x.id === id);
+    if (!p || p.stock < 1)
+      return avisar(
+        `Sin existencias de: ${p ? p.nombre : "Elemento desconocido"}`,
+      );
+    nombresItems.push(p.nombre);
+    totalPrecio += p.precio;
+  }
 
-    carrito.push({
-        idTemporal: Date.now(),
-        descripcion: `Crepa: ${nombresItems.join(", ")}`,
-        precioUnitario: totalPrecio,
-        elementosBase: itemsSeleccionados, // Guarda todos los IDs usados
-        cantidad: 1,
-    });
-    mostrarCarrito();
-    document.getElementById("form-crepa").reset();
-    actualizarVistaCrepa();
+  carrito.push({
+    idTemporal: Date.now(),
+    descripcion: `Crepa: ${nombresItems.join(", ")}`,
+    precioUnitario: totalPrecio,
+    elementosBase: itemsSeleccionados, // Guarda todos los IDs usados
+    cantidad: 1,
+  });
+  mostrarCarrito();
+  document.getElementById("form-crepa").reset();
+  actualizarVistaCrepa();
 }
 
 function mostrarCarrito() {
-    document.getElementById("carrito").innerHTML =
-        carrito
-            .map(
-                (i) => `
+  document.getElementById("carrito").innerHTML =
+    carrito
+      .map(
+        (i) => `
         <div class="mb-2 border-bottom pb-2">
             <p class="mb-1">${escapar(i.descripcion)}</p>
             <strong>x${i.cantidad} - ${precio(i.precioUnitario * i.cantidad)}</strong>
             <button type="button" class="btn btn-sm btn-outline-danger ms-2" onclick="quitar(${i.idTemporal})">Quitar</button>
         </div>
     `,
-            )
-            .join("") || "<p>Carrito vacío</p>";
+      )
+      .join("") || "<p>Carrito vacío</p>";
 }
 
 function quitar(idTemporal) {
-    carrito = carrito.filter((x) => x.idTemporal !== idTemporal);
-    mostrarCarrito();
+  carrito = carrito.filter((x) => x.idTemporal !== idTemporal);
+  mostrarCarrito();
 }
 
 function costo(z) {
-    return (
-        { "Santa Tecla": 0.5, "Ciudad Merliot": 1, "Antiguo Cuscatlán": 1.5 }[z] ||
-        0
-    );
+  return (
+    { "Santa Tecla": 0.5, "Ciudad Merliot": 1, "Antiguo Cuscatlán": 1.5 }[z] ||
+    0
+  );
 }
 
 function comprar(e) {
-    e.preventDefault();
-    let err = pedido(
-        "Cliente",
-        carrito,
-        document.getElementById("zona").value,
-        document.getElementById("direccion").value,
-    );
-    if (err) return avisar(err);
-    carrito = [];
-    avisar("Pedido registrado exitosamente");
-    location.reload();
+  e.preventDefault();
+  let err = pedido(
+    "Cliente",
+    carrito,
+    document.getElementById("zona").value,
+    document.getElementById("direccion").value,
+  );
+  if (err) return avisar(err);
+  carrito = [];
+  avisar("Pedido registrado exitosamente");
+  location.reload();
 }
 
 function pedido(cliente, items, z, dir) {
-    let d = datos();
-    if (!items.length) return "Agrega productos al carrito";
-    if (z !== "Retiro en tienda" && !dir.trim()) return "Falta dirección";
+  let d = datos();
+  if (!items.length) return "Agrega productos al carrito";
+  if (z !== "Retiro en tienda" && !dir.trim()) return "Falta dirección";
 
-    // 1. Sumar cuánto se necesita de cada ingrediente en TODO el pedido.
-    //    Antes se validaba cada crepa del carrito por separado contra el
-    //    stock original, así que dos crepas que usaran el mismo ingrediente
-    //    podían "pasar" la validación aunque juntas superaran el stock
-    //    disponible (y el stock podía terminar en negativo).
-    let demanda = {};
-    for (let i of items) {
-        for (let id of i.elementosBase) {
-            demanda[id] = (demanda[id] || 0) + i.cantidad;
-        }
+  // 1. Sumar cuánto se necesita de cada ingrediente en TODO el pedido.
+  //    Antes se validaba cada crepa del carrito por separado contra el
+  //    stock original, así que dos crepas que usaran el mismo ingrediente
+  //    podían "pasar" la validación aunque juntas superaran el stock
+  //    disponible (y el stock podía terminar en negativo).
+  let demanda = {};
+  for (let i of items) {
+    for (let id of i.elementosBase) {
+      demanda[id] = (demanda[id] || 0) + i.cantidad;
     }
+  }
 
-    // 2. Validar existencias contra la demanda total ya sumada
-    for (let id in demanda) {
-        let p = d.productos.find((x) => x.id === Number(id));
-        if (!p || p.stock < demanda[id])
-            return `Sin existencias suficientes de: ${p ? p.nombre : "ingrediente"}`;
-    }
+  // 2. Validar existencias contra la demanda total ya sumada
+  for (let id in demanda) {
+    let p = d.productos.find((x) => x.id === Number(id));
+    if (!p || p.stock < demanda[id])
+      return `Sin existencias suficientes de: ${p ? p.nombre : "ingrediente"}`;
+  }
 
-    // 3. Descontar del inventario y calcular total
-    let subtotal = 0;
-    let detalle = items.map((i) => {
-        i.elementosBase.forEach((id) => {
-            let p = d.productos.find((x) => x.id === id);
-            p.stock -= i.cantidad;
-            registrarMovimiento(d,p,-i.cantidad,"Venta","Pedido #"+d.numero);
-        });
-        subtotal += i.precioUnitario * i.cantidad;
-        return {
-            id: i.idTemporal,
-            nombre: i.descripcion,
-            cantidad: i.cantidad,
-            precio: i.precioUnitario,
-        };
+  // 3. Descontar del inventario y calcular total
+  let subtotal = 0;
+  let detalle = items.map((i) => {
+    i.elementosBase.forEach((id) => {
+      let p = d.productos.find((x) => x.id === id);
+      p.stock -= i.cantidad;
+      registrarMovimiento(d, p, -i.cantidad, "Venta", "Pedido #" + d.numero);
     });
+    subtotal += i.precioUnitario * i.cantidad;
+    return {
+      id: i.idTemporal,
+      nombre: i.descripcion,
+      cantidad: i.cantidad,
+      precio: i.precioUnitario,
+    };
+  });
 
-    d.pedidos.push({
-        id: d.numero++,
-        cliente,
-        items: detalle,
-        consumos: demanda,
-        total: Math.round((subtotal + costo(z)) * 100) / 100,
-        entrega: z,
-        direccion: dir,
-        estado: "Pendiente",
-        fecha: new Date().toISOString(),
-    });
-    guardar(d);
-    return "";
+  d.pedidos.push({
+    id: d.numero++,
+    cliente,
+    items: detalle,
+    consumos: demanda,
+    total: Math.round((subtotal + costo(z)) * 100) / 100,
+    entrega: z,
+    direccion: dir,
+    estado: "Pendiente",
+    fecha: new Date().toISOString(),
+  });
+  guardar(d);
+  return "";
 }
 
 // ---------- Utilidades de presentación para el panel de administrador ----------
 
 function capitalizar(s) {
-    return s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+  return s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
 }
 
 function colorEstado(estado) {
-    return (
-        {
-            Pendiente: "warning",
-            "En preparación": "info",
-            Entregado: "success",
-            Cancelado: "danger",
-        }[estado] || "secondary"
-    );
+  return (
+    {
+      Pendiente: "warning",
+      "En preparación": "info",
+      Entregado: "success",
+      Cancelado: "danger",
+    }[estado] || "secondary"
+  );
 }
 
 function opcionesEstado(actual) {
-    return ["Pendiente", "En preparación", "Entregado", "Cancelado"]
-        .map(
-            (e) =>
-                `<option value="${e}" ${e === actual ? "selected" : ""}>${e}</option>`,
-        )
-        .join("");
+  return ["Pendiente", "En preparación", "Entregado", "Cancelado"]
+    .map(
+      (e) =>
+        `<option value="${e}" ${e === actual ? "selected" : ""}>${e}</option>`,
+    )
+    .join("");
 }
 
 function formatearFecha(iso) {
-    if (!iso) return "-";
-    try {
-        return new Date(iso).toLocaleString("es-SV", {
-            dateStyle: "medium",
-            timeStyle: "short",
-        });
-    } catch (e) {
-        return "-";
-    }
+  if (!iso) return "-";
+  try {
+    return new Date(iso).toLocaleString("es-SV", {
+      dateStyle: "medium",
+      timeStyle: "short",
+    });
+  } catch (e) {
+    return "-";
+  }
 }
 
 function ordenarProductos(lista) {
-    const orden = { base: 0, ingrediente: 1, cubierta: 2 };
-    return lista
-        .slice()
-        .sort(
-            (a, b) =>
-                (orden[a.categoria] ?? 9) - (orden[b.categoria] ?? 9) ||
-                a.nombre.localeCompare(b.nombre, "es"),
-        );
+  const orden = { base: 0, ingrediente: 1, cubierta: 2 };
+  return lista
+    .slice()
+    .sort(
+      (a, b) =>
+        (orden[a.categoria] ?? 9) - (orden[b.categoria] ?? 9) ||
+        a.nombre.localeCompare(b.nombre, "es"),
+    );
 }
 
 // ---------- Productos: alta, edición y borrado ----------
 
 function abrirModalProducto(id) {
-    let d = datos();
-    let p = id ? d.productos.find((x) => x.id === id) : null;
-    document.getElementById("modalProductoTitulo").textContent = p
-        ? "Editar producto"
-        : "Nuevo producto";
-    document.getElementById("prod-id").value = p ? p.id : "";
-    document.getElementById("prod-nombre").value = p ? p.nombre : "";
-    document.getElementById("prod-categoria").value = p ? p.categoria : "base";
-    document.getElementById("prod-precio").value = p ? p.precio : "";
-    document.getElementById("prod-stock").value = p ? p.stock : 0;
-    document.getElementById("prod-min").value = p ? p.min : 5;
-    new bootstrap.Modal(document.getElementById("modalProducto")).show();
+  let d = datos();
+  let p = id ? d.productos.find((x) => x.id === id) : null;
+  document.getElementById("modalProductoTitulo").textContent = p
+    ? "Editar producto"
+    : "Nuevo producto";
+  document.getElementById("prod-id").value = p ? p.id : "";
+  document.getElementById("prod-nombre").value = p ? p.nombre : "";
+  document.getElementById("prod-categoria").value = p ? p.categoria : "base";
+  document.getElementById("prod-precio").value = p ? p.precio : "";
+  document.getElementById("prod-stock").value = p ? p.stock : 0;
+  document.getElementById("prod-min").value = p ? p.min : 5;
+  new bootstrap.Modal(document.getElementById("modalProducto")).show();
 }
 
 function guardarProducto(e) {
-    e.preventDefault();
-    let id = document.getElementById("prod-id").value;
-    let nombre = document.getElementById("prod-nombre").value.trim();
-    let categoria = document.getElementById("prod-categoria").value;
-    let precioNuevo = Number(document.getElementById("prod-precio").value);
-    let stockNuevo = Number(document.getElementById("prod-stock").value);
-    let minNuevo = Number(document.getElementById("prod-min").value);
+  e.preventDefault();
+  let id = document.getElementById("prod-id").value;
+  let nombre = document.getElementById("prod-nombre").value.trim();
+  let categoria = document.getElementById("prod-categoria").value;
+  let precioNuevo = Number(document.getElementById("prod-precio").value);
+  let stockNuevo = Number(document.getElementById("prod-stock").value);
+  let minNuevo = Number(document.getElementById("prod-min").value);
 
-    if (!nombre) return avisar("El nombre es obligatorio");
-    if (!(precioNuevo > 0)) return avisar("El precio debe ser mayor a 0");
-    if (stockNuevo < 0 || minNuevo < 0)
-        return avisar("El stock y el mínimo no pueden ser negativos");
+  if (!nombre) return avisar("El nombre es obligatorio");
+  if (!(precioNuevo > 0)) return avisar("El precio debe ser mayor a 0");
+  if (stockNuevo < 0 || minNuevo < 0)
+    return avisar("El stock y el mínimo no pueden ser negativos");
 
-    let d = datos();
-    const stockAnterior = id ? (d.productos.find(x=>x.id===Number(id))?.stock ?? 0) : 0;
-    if (id) {
-        let p = d.productos.find((x) => x.id === Number(id));
-        if (p) {
-            p.nombre = nombre;
-            p.categoria = categoria;
-            p.precio = precioNuevo;
-            p.stock = stockNuevo;
-            p.min = minNuevo;
-        }
-    } else {
-        let nuevoId = d.productos.length
-            ? Math.max(...d.productos.map((x) => x.id)) + 1
-            : 1;
-        d.productos.push({
-            id: nuevoId,
-            nombre,
-            categoria,
-            precio: precioNuevo,
-            stock: stockNuevo,
-            min: minNuevo,
-        });
+  let d = datos();
+  const stockAnterior = id
+    ? (d.productos.find((x) => x.id === Number(id))?.stock ?? 0)
+    : 0;
+  if (id) {
+    let p = d.productos.find((x) => x.id === Number(id));
+    if (p) {
+      p.nombre = nombre;
+      p.categoria = categoria;
+      p.precio = precioNuevo;
+      p.stock = stockNuevo;
+      p.min = minNuevo;
     }
-    const editado = id ? d.productos.find(x=>x.id===Number(id)) : d.productos[d.productos.length-1];
-    if(editado && editado.stock!==stockAnterior) registrarMovimiento(d,editado,editado.stock-stockAnterior,"Ajuste","Edición de producto");
-    guardar(d);
-
-    // Esperamos a que el modal termine de cerrarse (evento hidden.bs.modal)
-    // antes de volver a dibujar #contenido; así Bootstrap limpia su backdrop
-    // correctamente en vez de perder la referencia al modal a medio cerrar.
-    let modalEl = document.getElementById("modalProducto");
-    modalEl.addEventListener("hidden.bs.modal", () => contenido(), {
-        once: true,
+  } else {
+    let nuevoId = d.productos.length
+      ? Math.max(...d.productos.map((x) => x.id)) + 1
+      : 1;
+    d.productos.push({
+      id: nuevoId,
+      nombre,
+      categoria,
+      precio: precioNuevo,
+      stock: stockNuevo,
+      min: minNuevo,
     });
-    bootstrap.Modal.getInstance(modalEl).hide();
+  }
+  const editado = id
+    ? d.productos.find((x) => x.id === Number(id))
+    : d.productos[d.productos.length - 1];
+  if (editado && editado.stock !== stockAnterior)
+    registrarMovimiento(
+      d,
+      editado,
+      editado.stock - stockAnterior,
+      "Ajuste",
+      "Edición de producto",
+    );
+  guardar(d);
+
+  // Esperamos a que el modal termine de cerrarse (evento hidden.bs.modal)
+  // antes de volver a dibujar #contenido; así Bootstrap limpia su backdrop
+  // correctamente en vez de perder la referencia al modal a medio cerrar.
+  let modalEl = document.getElementById("modalProducto");
+  modalEl.addEventListener("hidden.bs.modal", () => contenido(), {
+    once: true,
+  });
+  bootstrap.Modal.getInstance(modalEl).hide();
 }
 
 function eliminarProducto(id) {
-    let d = datos();
-    let p = d.productos.find((x) => x.id === id);
-    if (!p) return;
-    if (!confirm(`¿Eliminar "${p.nombre}"? Esta acción no se puede deshacer.`))
-        return;
-    d.productos = d.productos.filter((x) => x.id !== id);
-    guardar(d);
-    contenido();
+  let d = datos();
+  let p = d.productos.find((x) => x.id === id);
+  if (!p) return;
+  if (!confirm(`¿Eliminar "${p.nombre}"? Esta acción no se puede deshacer.`))
+    return;
+  d.productos = d.productos.filter((x) => x.id !== id);
+  guardar(d);
+  contenido();
 }
 
 // ---------- Inventario: reabastecer ----------
 
 function reabastecer(id) {
-    let input = document.getElementById("cant-" + id);
-    let cant = Number(input.value);
-    if (!cant || cant < 1) return avisar("Ingresa una cantidad válida");
-    let d = datos();
-    let p = d.productos.find((x) => x.id === id);
-    if (!p) return;
-    p.stock += cant;
-    registrarMovimiento(d,p,cant,"Entrada","Reabastecimiento");
-    guardar(d);
-    avisar(`Se agregaron ${cant} unidades a ${p.nombre}. Stock actual: ${p.stock}.`);
-    contenido();
+  let input = document.getElementById("cant-" + id);
+  let cant = Number(input.value);
+  if (!cant || cant < 1) return avisar("Ingresa una cantidad válida");
+  let d = datos();
+  let p = d.productos.find((x) => x.id === id);
+  if (!p) return;
+  p.stock += cant;
+  registrarMovimiento(d, p, cant, "Entrada", "Reabastecimiento");
+  guardar(d);
+  avisar(
+    `Se agregaron ${cant} unidades a ${p.nombre}. Stock actual: ${p.stock}.`,
+  );
+  contenido();
 }
 
 // ---------- Pedidos: cambiar estado ----------
 
 function cambiarEstado(id, nuevo) {
-    let d = datos();
-    let ped = d.pedidos.find((x) => x.id === id);
-    if (!ped) return;
-    if (ped.estado === nuevo) return;
-    if (nuevo === "Cancelado") {
-        if (!ped.consumos) return avisar("Pedido antiguo sin detalle de consumos: ajusta inventario manualmente antes de cancelar.");
-        for (const [id,cantidad] of Object.entries(ped.consumos)) {
-            const p = d.productos.find(x=>x.id===Number(id));
-            if(p){p.stock+=cantidad;registrarMovimiento(d,p,cantidad,"Devolución","Pedido #"+ped.id);}
-        }
+  let d = datos();
+  let ped = d.pedidos.find((x) => x.id === id);
+  if (!ped) return;
+  if (ped.estado === nuevo) return;
+  if (nuevo === "Cancelado") {
+    if (!ped.consumos)
+      return avisar(
+        "Pedido antiguo sin detalle de consumos: ajusta inventario manualmente antes de cancelar.",
+      );
+    for (const [id, cantidad] of Object.entries(ped.consumos)) {
+      const p = d.productos.find((x) => x.id === Number(id));
+      if (p) {
+        p.stock += cantidad;
+        registrarMovimiento(d, p, cantidad, "Devolución", "Pedido #" + ped.id);
+      }
     }
-    if (ped.estado === "Cancelado") return avisar("No se puede reactivar un pedido cancelado.");
-    ped.estado = nuevo;
-    guardar(d);
-    contenido();
+  }
+  if (ped.estado === "Cancelado")
+    return avisar("No se puede reactivar un pedido cancelado.");
+  ped.estado = nuevo;
+  guardar(d);
+  contenido();
 }
 
 function contenido() {
-    let p = document.body.dataset.pagina,
-        a = document.getElementById("contenido"),
-        d = datos();
+  let p = document.body.dataset.pagina,
+    a = document.getElementById("contenido"),
+    d = datos();
 
-    if (p === "login") {
-        document.getElementById("formLogin").onsubmit = entrar;
-        return;
-    }
-    if (p === "inicio") return;
-    if (
-        ["resumen", "productos", "inventario", "ventas", "pedidos"].includes(p) &&
-        !revisar("admin")
-    )
-        return;
-    if (["tienda", "mis"].includes(p) && !revisar("cliente")) return;
+  if (p === "login") {
+    document.getElementById("formLogin").onsubmit = entrar;
+    return;
+  }
+  if (p === "inicio") return;
+  if (
+    ["resumen", "productos", "inventario", "ventas", "pedidos"].includes(p) &&
+    !revisar("admin")
+  )
+    return;
+  if (["tienda", "mis"].includes(p) && !revisar("cliente")) return;
 
-    if (p === "tienda") {
-        let bases = d.productos.filter((x) => x.categoria === "base");
-        let ingredientes = d.productos.filter((x) => x.categoria === "ingrediente");
-        let cubiertas = d.productos.filter((x) => x.categoria === "cubierta");
+  if (p === "tienda") {
+    let bases = d.productos.filter((x) => x.categoria === "base");
+    let ingredientes = d.productos.filter((x) => x.categoria === "ingrediente");
+    let cubiertas = d.productos.filter((x) => x.categoria === "cubierta");
 
-        a.innerHTML = `
+    a.innerHTML = `
             <h1 class="titulo mb-4">Arma tu Crepa</h1>
             <div class="row g-4">
                 <div class="col-md-7">
@@ -408,15 +436,15 @@ function contenido() {
                         <h5 class="mb-3">2. Ingredientes (Máx 2)</h5>
                         <div class="mb-4">
                             ${ingredientes
-                .map(
-                    (x) => `
+                              .map(
+                                (x) => `
                                 <div class="form-check">
                                     <input class="form-check-input chk-ingrediente" type="checkbox" value="${x.id}" id="ing-${x.id}">
                                     <label class="form-check-label" for="ing-${x.id}">${escapar(x.nombre)} - ${precio(x.precio)}</label>
                                 </div>
                             `,
-                )
-                .join("")}
+                              )
+                              .join("")}
                         </div>
                         <h5 class="mb-3">3. Cubierta</h5>
                         <select id="sel-cubierta" class="form-select mb-4">
@@ -440,20 +468,23 @@ function contenido() {
                     </div>
                 </div>
             </div>`;
-        mostrarCarrito();
-        document.getElementById("form-crepa").addEventListener("change",actualizarVistaCrepa);
-        actualizarVistaCrepa();
-        document.getElementById("form-crepa").onsubmit = armarCrepa;
-        document.getElementById("compra").onsubmit = comprar;
-    }
+    mostrarCarrito();
+    document
+      .getElementById("form-crepa")
+      .addEventListener("change", actualizarVistaCrepa);
+    actualizarVistaCrepa();
+    document.getElementById("form-crepa").onsubmit = armarCrepa;
+    document.getElementById("compra").onsubmit = comprar;
+  }
 
-    if (p === "mis") {
-        a.innerHTML = `<h1 class="titulo">Mis pedidos</h1>
-            ${d.pedidos
+  if (p === "mis") {
+    a.innerHTML = `<h1 class="titulo">Mis pedidos</h1>
+            ${
+              d.pedidos
                 .filter((x) => x.cliente === "Cliente")
                 .sort((a, b) => b.id - a.id)
                 .map(
-                    (x) => `
+                  (x) => `
             <div class="card p-3 mb-3 shadow-sm border-0">
                 <h5>Pedido #${x.id} - <span class="badge text-bg-${colorEstado(x.estado)}">${escapar(x.estado)}</span></h5>
                 <p class="mb-1 text-muted">${x.items.map((i) => escapar(i.nombre) + " x" + i.cantidad).join("<br>")}</p>
@@ -463,20 +494,23 @@ function contenido() {
                 )
                 .join("") || "<p>Todavía no tienes pedidos.</p>"
             }`;
-    }
+  }
 
-    if (p === "resumen") {
-        let totalIngresos = d.pedidos
-            .filter((x) => x.estado !== "Cancelado")
-            .reduce((s, x) => s + x.total, 0);
-        let totalPedidos = d.pedidos.length;
-        let activos = d.pedidos.filter((x) =>
-            ["Pendiente", "En preparación"].includes(x.estado),
-        ).length;
-        let stockBajo = d.productos.filter((x) => x.stock <= x.min);
-        let ultimos = d.pedidos.slice().sort((a, b) => b.id - a.id).slice(0, 5);
+  if (p === "resumen") {
+    let totalIngresos = d.pedidos
+      .filter((x) => x.estado !== "Cancelado")
+      .reduce((s, x) => s + x.total, 0);
+    let totalPedidos = d.pedidos.length;
+    let activos = d.pedidos.filter((x) =>
+      ["Pendiente", "En preparación"].includes(x.estado),
+    ).length;
+    let stockBajo = d.productos.filter((x) => x.stock <= x.min);
+    let ultimos = d.pedidos
+      .slice()
+      .sort((a, b) => b.id - a.id)
+      .slice(0, 5);
 
-        a.innerHTML = `
+    a.innerHTML = `
             <h1 class="titulo mb-4">Resumen</h1>
             <div class="row g-3 mb-4">
                 <div class="col-6 col-md-3">
@@ -508,8 +542,9 @@ function contenido() {
                 <div class="col-md-7">
                     <div class="card p-3 shadow-sm border-0">
                         <h5 class="mb-3 d-flex justify-content-between align-items-center">Últimos pedidos <a href="pedidos.html" class="small">Ver todos →</a></h5>
-                        ${ultimos.length
-                ? `<div class="table-responsive">
+                        ${
+                          ultimos.length
+                            ? `<div class="table-responsive">
                                 <table class="table table-sm align-middle mb-0">
                                     <thead><tr><th>#</th><th>Cliente</th><th>Total</th><th>Estado</th></tr></thead>
                                     <tbody>
@@ -517,26 +552,27 @@ function contenido() {
                                     </tbody>
                                 </table>
                             </div>`
-                : '<p class="text-muted mb-0">Todavía no hay pedidos.</p>'
-            }
+                            : '<p class="text-muted mb-0">Todavía no hay pedidos.</p>'
+                        }
                     </div>
                 </div>
                 <div class="col-md-5">
                     <div class="card p-3 shadow-sm border-0">
                         <h5 class="mb-3 d-flex justify-content-between align-items-center">Alertas de inventario <a href="inventario.html" class="small">Ver inventario →</a></h5>
-                        ${stockBajo.length
-                ? `<ul class="list-unstyled mb-0">
+                        ${
+                          stockBajo.length
+                            ? `<ul class="list-unstyled mb-0">
                                 ${stockBajo.map((x) => `<li class="d-flex justify-content-between border-bottom py-2"><span>${escapar(x.nombre)}</span><span class="badge text-bg-${x.stock === 0 ? "danger" : "warning"}">${x.stock} / mín. ${x.min}</span></li>`).join("")}
                             </ul>`
-                : '<p class="text-muted mb-0">Todo el inventario está en buen nivel.</p>'
-            }
+                            : '<p class="text-muted mb-0">Todo el inventario está en buen nivel.</p>'
+                        }
                     </div>
                 </div>
             </div>`;
-    }
+  }
 
-    if (p === "productos") {
-        a.innerHTML = `
+  if (p === "productos") {
+    a.innerHTML = `
             <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
                 <h1 class="titulo mb-0">Productos</h1>
                 <button class="btn btn-crepa" onclick="abrirModalProducto(null)">+ Nuevo producto</button>
@@ -546,8 +582,8 @@ function contenido() {
                     <thead><tr><th>Producto</th><th>Categoría</th><th>Precio</th><th>Stock</th><th>Mínimo</th><th></th></tr></thead>
                     <tbody>
                         ${ordenarProductos(d.productos)
-                .map(
-                    (x) => `
+                          .map(
+                            (x) => `
                         <tr>
                             <td>${escapar(x.nombre)}</td>
                             <td><span class="badge text-bg-light border">${escapar(capitalizar(x.categoria))}</span></td>
@@ -559,8 +595,8 @@ function contenido() {
                                 <button class="btn btn-sm btn-outline-danger" onclick="eliminarProducto(${x.id})">Eliminar</button>
                             </td>
                         </tr>`,
-                )
-                .join("")}
+                          )
+                          .join("")}
                     </tbody>
                 </table>
             </div>
@@ -610,14 +646,15 @@ function contenido() {
                     </div>
                 </div>
             </div>`;
-        document.getElementById("form-producto").onsubmit = guardarProducto;
-    }
+    document.getElementById("form-producto").onsubmit = guardarProducto;
+  }
 
-    if (p === "inventario") {
-        let bajo = d.productos.filter((x) => x.stock <= x.min);
-        a.innerHTML = `
+  if (p === "inventario") {
+    let bajo = d.productos.filter((x) => x.stock <= x.min);
+    a.innerHTML = `
             <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4"><h1 class="titulo mb-0">Inventario</h1><div class="d-flex gap-2"><button class="btn btn-outline-secondary btn-sm" onclick="exportarInventario()">CSV</button><button class="btn btn-outline-secondary btn-sm" onclick="exportarMovimientos()">Movimientos CSV</button><button class="btn btn-crepa btn-sm" onclick="imprimirReporte('inventario')">PDF / Imprimir</button></div></div>
-            ${bajo.length
+            ${
+              bajo.length
                 ? `<div class="alert alert-warning">⚠️ ${bajo.length} producto${bajo.length > 1 ? "s" : ""} con poco stock o agotado${bajo.length > 1 ? "s" : ""}.</div>`
                 : ""
             }
@@ -626,8 +663,8 @@ function contenido() {
                     <thead><tr><th>Producto</th><th>Categoría</th><th>Stock</th><th>Mínimo</th><th>Estado</th><th>Reabastecer</th></tr></thead>
                     <tbody>
                         ${ordenarProductos(d.productos)
-                .map(
-                    (x) => `
+                          .map(
+                            (x) => `
                         <tr class="${x.stock === 0 ? "table-danger" : x.stock <= x.min ? "table-warning" : ""}">
                             <td>${escapar(x.nombre)}</td>
                             <td><span class="badge text-bg-light border">${escapar(capitalizar(x.categoria))}</span></td>
@@ -641,36 +678,58 @@ function contenido() {
                                 </div>
                             </td>
                         </tr>`,
-                )
-                .join("")}
+                          )
+                          .join("")}
                     </tbody>
                 </table>
             </div>
             <h2 class="h5 titulo mt-4">Historial de movimientos</h2>
             <div class="table-responsive"><table class="table table-sm"><thead><tr><th>Fecha</th><th>Producto</th><th>Tipo</th><th>Cantidad</th><th>Referencia</th><th>Stock final</th></tr></thead><tbody>
-            ${(d.movimientos||[]).slice(-20).reverse().map(m=>'<tr><td>'+formatearFecha(m.fecha)+'</td><td>'+escapar(m.producto)+'</td><td>'+escapar(m.tipo)+'</td><td>'+m.cantidad+'</td><td>'+escapar(m.referencia)+'</td><td>'+m.stockFinal+'</td></tr>').join('') || '<tr><td colspan="6">Sin movimientos registrados</td></tr>'}
+            ${
+              (d.movimientos || [])
+                .slice(-20)
+                .reverse()
+                .map(
+                  (m) =>
+                    "<tr><td>" +
+                    formatearFecha(m.fecha) +
+                    "</td><td>" +
+                    escapar(m.producto) +
+                    "</td><td>" +
+                    escapar(m.tipo) +
+                    "</td><td>" +
+                    m.cantidad +
+                    "</td><td>" +
+                    escapar(m.referencia) +
+                    "</td><td>" +
+                    m.stockFinal +
+                    "</td></tr>",
+                )
+                .join("") ||
+              '<tr><td colspan="6">Sin movimientos registrados</td></tr>'
+            }
             </tbody></table></div>`;
-    }
+  }
 
-    if (p === "ventas") {
-        let validos = d.pedidos.filter((x) => x.estado !== "Cancelado");
-        let totalIngresos = validos.reduce((s, x) => s + x.total, 0);
-        let totalPedidos = d.pedidos.length;
-        let cancelados = d.pedidos.filter((x) => x.estado === "Cancelado").length;
-        let ticketPromedio = validos.length ? totalIngresos / validos.length : 0;
+  if (p === "ventas") {
+    let validos = d.pedidos.filter((x) => x.estado !== "Cancelado");
+    let totalIngresos = validos.reduce((s, x) => s + x.total, 0);
+    let totalPedidos = d.pedidos.length;
+    let cancelados = d.pedidos.filter((x) => x.estado === "Cancelado").length;
+    let ticketPromedio = validos.length ? totalIngresos / validos.length : 0;
 
-        let zonasVentas = {};
-        validos.forEach((x) => {
-            zonasVentas[x.entrega] = (zonasVentas[x.entrega] || 0) + x.total;
-        });
-        let maxZona = Math.max(1, ...Object.values(zonasVentas));
+    let zonasVentas = {};
+    validos.forEach((x) => {
+      zonasVentas[x.entrega] = (zonasVentas[x.entrega] || 0) + x.total;
+    });
+    let maxZona = Math.max(1, ...Object.values(zonasVentas));
 
-        let estadosPedidos = {};
-        d.pedidos.forEach((x) => {
-            estadosPedidos[x.estado] = (estadosPedidos[x.estado] || 0) + 1;
-        });
+    let estadosPedidos = {};
+    d.pedidos.forEach((x) => {
+      estadosPedidos[x.estado] = (estadosPedidos[x.estado] || 0) + 1;
+    });
 
-        a.innerHTML = `
+    a.innerHTML = `
             <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4"><h1 class="titulo mb-0">Ventas</h1><div class="d-flex gap-2"><button class="btn btn-outline-secondary btn-sm" onclick="exportarVentas()">CSV</button><button class="btn btn-crepa btn-sm" onclick="imprimirReporte('ventas')">PDF / Imprimir</button></div></div>
             <div class="row g-3 mb-4">
                 <div class="col-6 col-md-3">
@@ -702,45 +761,55 @@ function contenido() {
                 <div class="col-md-6">
                     <div class="card p-3 shadow-sm border-0">
                         <h5 class="mb-3">Ventas por zona de entrega</h5>
-                        ${Object.keys(zonasVentas).length
-                ? Object.entries(zonasVentas)
-                    .sort((a, b) => b[1] - a[1])
-                    .map(
-                        ([z, total]) => `
+                        ${
+                          Object.keys(zonasVentas).length
+                            ? Object.entries(zonasVentas)
+                                .sort((a, b) => b[1] - a[1])
+                                .map(
+                                  ([z, total]) => `
                             <div class="mb-3">
                                 <div class="d-flex justify-content-between small mb-1"><span>${escapar(z)}</span><span>${precio(total)}</span></div>
                                 <div class="progress" style="height:8px"><div class="progress-bar" style="width:${((total / maxZona) * 100).toFixed(0)}%;background:#b86d2c"></div></div>
                             </div>`,
-                    )
-                    .join("")
-                : '<p class="text-muted mb-0">Todavía no hay ventas.</p>'
-            }
+                                )
+                                .join("")
+                            : '<p class="text-muted mb-0">Todavía no hay ventas.</p>'
+                        }
                     </div>
                 </div>
                 <div class="col-md-6">
                     <div class="card p-3 shadow-sm border-0">
                         <h5 class="mb-3">Pedidos por estado</h5>
-                        ${Object.keys(estadosPedidos).length
-                ? `<div class="d-flex flex-wrap gap-2">${Object.entries(estadosPedidos).map(([e, c]) => `<span class="badge text-bg-${colorEstado(e)} fs-6 p-2">${escapar(e)}: ${c}</span>`).join("")}</div>`
-                : '<p class="text-muted mb-0">Todavía no hay pedidos.</p>'
-            }
+                        ${
+                          Object.keys(estadosPedidos).length
+                            ? `<div class="d-flex flex-wrap gap-2">${Object.entries(
+                                estadosPedidos,
+                              )
+                                .map(
+                                  ([e, c]) =>
+                                    `<span class="badge text-bg-${colorEstado(e)} fs-6 p-2">${escapar(e)}: ${c}</span>`,
+                                )
+                                .join("")}</div>`
+                            : '<p class="text-muted mb-0">Todavía no hay pedidos.</p>'
+                        }
                     </div>
                 </div>
             </div>`;
-    }
+  }
 
-    if (p === "pedidos") {
-        let todos = d.pedidos.slice().sort((a, b) => b.id - a.id);
-        a.innerHTML = `
+  if (p === "pedidos") {
+    let todos = d.pedidos.slice().sort((a, b) => b.id - a.id);
+    a.innerHTML = `
             <h1 class="titulo mb-4">Pedidos</h1>
-            ${todos.length
+            ${
+              todos.length
                 ? `<div class="table-responsive">
                     <table class="table align-middle">
                         <thead><tr><th>#</th><th>Cliente</th><th>Fecha</th><th>Entrega</th><th>Detalle</th><th>Total</th><th>Estado</th></tr></thead>
                         <tbody>
                             ${todos
-                    .map(
-                        (x) => `
+                              .map(
+                                (x) => `
                             <tr>
                                 <td>#${x.id}</td>
                                 <td>${escapar(x.cliente)}</td>
@@ -754,43 +823,143 @@ function contenido() {
                                     </select>
                                 </td>
                             </tr>`,
-                    )
-                    .join("")}
+                              )
+                              .join("")}
                         </tbody>
                     </table>
                 </div>`
                 : '<p class="text-muted">Todavía no hay pedidos.</p>'
             }`;
-    }
+  }
 }
 
-
-function actualizarVistaCrepa(){
- const vista=document.getElementById('vista-crepa');if(!vista)return;
- const d=datos(), ids=[Number(document.getElementById('sel-base').value),Number(document.getElementById('sel-cubierta').value),...Array.from(document.querySelectorAll('.chk-ingrediente:checked'),x=>Number(x.value))];
- const productos=ids.map(id=>d.productos.find(p=>p.id===id)).filter(Boolean);
- vista.innerHTML='<div class="crepa-ilustracion" role="img" aria-label="Ilustración de una crepa"><span class="crepa-disco"></span><span class="crepa-doblez"></span></div><p class="mb-1">'+escapar(productos.map(p=>p.nombre).join(' · '))+'</p><strong class="fs-4 titulo">'+precio(productos.reduce((s,p)=>s+p.precio,0))+'</strong><p class="small text-muted mb-0">Vista ilustrativa</p>';
+function actualizarVistaCrepa() {
+  const vista = document.getElementById("vista-crepa");
+  if (!vista) return;
+  const d = datos(),
+    ids = [
+      Number(document.getElementById("sel-base").value),
+      Number(document.getElementById("sel-cubierta").value),
+      ...Array.from(
+        document.querySelectorAll(".chk-ingrediente:checked"),
+        (x) => Number(x.value),
+      ),
+    ];
+  const productos = ids
+    .map((id) => d.productos.find((p) => p.id === id))
+    .filter(Boolean);
+  vista.innerHTML =
+    '<div class="crepa-ilustracion" role="img" aria-label="Ilustración de una crepa"><span class="crepa-disco"></span><span class="crepa-doblez"></span></div><p class="mb-1">' +
+    escapar(productos.map((p) => p.nombre).join(" · ")) +
+    '</p><strong class="fs-4 titulo">' +
+    precio(productos.reduce((s, p) => s + p.precio, 0)) +
+    '</strong><p class="small text-muted mb-0">Vista ilustrativa</p>';
 }
-function descargarCSV(nombre,filas){
- const csv='\uFEFF'+filas.map(f=>f.map(v=>'"'+String(v??'').replace(/"/g,'""').replace(/^[=+@\-\t\r]/,"'// Inicializar")+'"').join(';')).join('\r\n');
- const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
- const a=document.createElement('a');a.href=url;a.download=nombre;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+function descargarCSV(nombre, filas) {
+  const csv =
+    "\uFEFF" +
+    filas
+      .map((f) =>
+        f
+          .map(
+            (v) =>
+              '"' +
+              String(v ?? "")
+                .replace(/"/g, '""')
+                .replace(/^[=+@\-\t\r]/, "'// Inicializar") +
+              '"',
+          )
+          .join(";"),
+      )
+      .join("\r\n");
+  const url = URL.createObjectURL(
+    new Blob([csv], { type: "text/csv;charset=utf-8" }),
+  );
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = nombre;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
-function exportarInventario(){descargarCSV('inventario.csv',[['Producto','Categoría','Stock','Mínimo','Precio'],...datos().productos.map(p=>[p.nombre,p.categoria,p.stock,p.min,p.precio])]);}
-function exportarMovimientos(){descargarCSV('movimientos.csv',[['Fecha','Producto','Tipo','Cantidad','Referencia','Stock final'],...(datos().movimientos||[]).map(m=>[m.fecha,m.producto,m.tipo,m.cantidad,m.referencia,m.stockFinal])]);}
-function exportarVentas(){descargarCSV('ventas.csv',[['Pedido','Fecha','Cliente','Estado','Entrega','Total'],...datos().pedidos.map(p=>[p.id,p.fecha,p.cliente,p.estado,p.entrega,p.total])]);}
-function imprimirReporte(tipo){
- const d=datos(), inv=tipo==='inventario', cab=inv?['Producto','Stock','Mínimo','Precio']:['Pedido','Fecha','Estado','Total'];
- const filas=inv?d.productos.map(p=>[p.nombre,p.stock,p.min,precio(p.precio)]):d.pedidos.map(p=>[p.id,formatearFecha(p.fecha),p.estado,precio(p.total)]);
- const w=window.open('','_blank');if(!w)return avisar('Habilita las ventanas emergentes para imprimir.');
- const th=cab.map(x=>'<th>'+escapar(x)+'</th>').join('');
- const tr=filas.map(f=>'<tr>'+f.map(x=>'<td>'+escapar(x)+'</td>').join('')+'</tr>').join('');
- w.document.write('<!doctype html><html lang="es"><meta charset="utf-8"><title>Reporte CrepasVibes</title><style>body{font:14px Arial;margin:30px}table{border-collapse:collapse;width:100%}td,th{border:1px solid #ddd;padding:8px}th{background:#f5e4ce}</style><h1>CrepasVibes - '+(inv?'Inventario':'Ventas')+'</h1><table><thead><tr>'+th+'</tr></thead><tbody>'+tr+'</tbody></table></html>');
- w.document.close();w.focus();w.print();
+function exportarInventario() {
+  descargarCSV("inventario.csv", [
+    ["Producto", "Categoría", "Stock", "Mínimo", "Precio"],
+    ...datos().productos.map((p) => [
+      p.nombre,
+      p.categoria,
+      p.stock,
+      p.min,
+      p.precio,
+    ]),
+  ]);
+}
+function exportarMovimientos() {
+  descargarCSV("movimientos.csv", [
+    ["Fecha", "Producto", "Tipo", "Cantidad", "Referencia", "Stock final"],
+    ...(datos().movimientos || []).map((m) => [
+      m.fecha,
+      m.producto,
+      m.tipo,
+      m.cantidad,
+      m.referencia,
+      m.stockFinal,
+    ]),
+  ]);
+}
+function exportarVentas() {
+  descargarCSV("ventas.csv", [
+    ["Pedido", "Fecha", "Cliente", "Estado", "Entrega", "Total"],
+    ...datos().pedidos.map((p) => [
+      p.id,
+      p.fecha,
+      p.cliente,
+      p.estado,
+      p.entrega,
+      p.total,
+    ]),
+  ]);
+}
+function imprimirReporte(tipo) {
+  const d = datos(),
+    inv = tipo === "inventario",
+    cab = inv
+      ? ["Producto", "Stock", "Mínimo", "Precio"]
+      : ["Pedido", "Fecha", "Estado", "Total"];
+  const filas = inv
+    ? d.productos.map((p) => [p.nombre, p.stock, p.min, precio(p.precio)])
+    : d.pedidos.map((p) => [
+        p.id,
+        formatearFecha(p.fecha),
+        p.estado,
+        precio(p.total),
+      ]);
+  const w = window.open("", "_blank");
+  if (!w) return avisar("Habilita las ventanas emergentes para imprimir.");
+  const th = cab.map((x) => "<th>" + escapar(x) + "</th>").join("");
+  const tr = filas
+    .map(
+      (f) =>
+        "<tr>" + f.map((x) => "<td>" + escapar(x) + "</td>").join("") + "</tr>",
+    )
+    .join("");
+  w.document.write(
+    '<!doctype html><html lang="es"><meta charset="utf-8"><title>Reporte CrepasVibes</title><style>body{font:14px Arial;margin:30px}table{border-collapse:collapse;width:100%}td,th{border:1px solid #ddd;padding:8px}th{background:#f5e4ce}</style><h1>CrepasVibes - ' +
+      (inv ? "Inventario" : "Ventas") +
+      "</h1><table><thead><tr>" +
+      th +
+      "</tr></thead><tbody>" +
+      tr +
+      "</tbody></table></html>",
+  );
+  w.document.close();
+  w.focus();
+  w.print();
 }
 
 // Inicializar
 document.addEventListener("DOMContentLoaded", () => {
-    menu();
-    contenido();
-});
+  menu();
+  contenido();
+})
