@@ -46,3 +46,6 @@ footer {
 .crepa-ilustracion{position:relative;width:190px;height:150px;margin:auto;filter:drop-shadow(0 8px 9px #79421f33)}
 .crepa-disco{position:absolute;left:18px;top:12px;width:155px;height:125px;border-radius:50%;background:radial-gradient(ellipse at 40% 35%,#fbe4a6,#d58c47 75%);border:6px solid #e6a45f}
 .crepa-doblez{position:absolute;left:43px;top:49px;width:108px;height:78px;background:linear-gradient(145deg,#f7d68e,#c9823d);clip-path:polygon(0 0,100% 0,50% 100%);border-radius:14px}
+.catalogo-card{transition:transform .2s ease-in-out}
+.catalogo-card:hover{transform:translateY(-5px)}
+.catalogo-top-bg{min-height:140px;background:#f8eee4;display:grid;place-items:center;font-size:60px}

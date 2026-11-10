@@ -50,24 +50,147 @@ const inicio = {
       min: 5,
       categoria: "cubierta",
     },
+    {
+      id: 7,
+      nombre: "Crepa Nutella + Guineo",
+      precio: 2.0,
+      stock: 15,
+      min: 5,
+      categoria: "prearmada",
+      emoji: "🍌",
+    },
+    {
+      id: 8,
+      nombre: "Crepa Nutella + Fresas",
+      precio: 2.5,
+      stock: 12,
+      min: 5,
+      categoria: "prearmada",
+      emoji: "🍓",
+    },
+    {
+      id: 9,
+      nombre: "Crepa Chocolate",
+      precio: 2.25,
+      stock: 10,
+      min: 5,
+      categoria: "prearmada",
+      emoji: "🍫",
+    },
+    {
+      id: 10,
+      nombre: "Crepa de Manzana",
+      precio: 2.75,
+      stock: 9,
+      min: 5,
+      categoria: "prearmada",
+      emoji: "🍎",
+    },
+    {
+      id: 11,
+      nombre: "Crepa de Oreo",
+      precio: 3.0,
+      stock: 8,
+      min: 5,
+      categoria: "prearmada",
+      emoji: "🍪",
+    },
+    {
+      id: 12,
+      nombre: "Crepa Clásica",
+      precio: 1.75,
+      stock: 20,
+      min: 5,
+      categoria: "prearmada",
+      emoji: "🥞",
+    },
   ],
   pedidos: [],
   movimientos: [],
   numero: 1,
+  catalogoPrearmadasInicializado: true,
 };
+
+function clonar(valor) {
+  return JSON.parse(JSON.stringify(valor));
+}
+
+function normalizarDatos(d) {
+  let cambio = false;
+  if (!d || typeof d !== "object" || Array.isArray(d)) {
+    return { datos: clonar(inicio), cambio: true };
+  }
+  if (!Array.isArray(d.productos)) {
+    d.productos = clonar(inicio.productos);
+    cambio = true;
+  }
+  if (!Array.isArray(d.pedidos)) {
+    d.pedidos = [];
+    cambio = true;
+  }
+  if (!Array.isArray(d.movimientos)) {
+    d.movimientos = [];
+    cambio = true;
+  }
+
+  // Migra el catálogo una sola vez para no restaurar productos que
+  // administración haya eliminado intencionalmente después de la migración.
+  if (d.catalogoPrearmadasInicializado !== true) {
+    if (!d.productos.some((p) => p.categoria === "prearmada")) {
+      let siguienteId =
+        Math.max(0, ...d.productos.map((p) => Number(p.id) || 0)) + 1;
+      inicio.productos
+        .filter((p) => p.categoria === "prearmada")
+        .forEach((p) => d.productos.push({ ...p, id: siguienteId++ }));
+    }
+    d.catalogoPrearmadasInicializado = true;
+    cambio = true;
+  }
+
+  const siguientePedido =
+    Math.max(0, ...d.pedidos.map((p) => Number(p.id) || 0)) + 1;
+  if (!Number.isInteger(d.numero) || d.numero < siguientePedido) {
+    d.numero = siguientePedido;
+    cambio = true;
+  }
+  return { datos: d, cambio };
+}
 
 function datos() {
   try {
-    return (
-      JSON.parse(localStorage.getItem(llave)) ||
-      JSON.parse(JSON.stringify(inicio))
-    );
+    return normalizarDatos(
+      JSON.parse(localStorage.getItem(llave)) || clonar(inicio),
+    ).datos;
   } catch (e) {
-    return JSON.parse(JSON.stringify(inicio));
+    return clonar(inicio);
   }
 }
 function guardar(d) {
   localStorage.setItem(llave, JSON.stringify(d));
+}
+
+async function inicializarDatos() {
+  let d = null;
+  try {
+    const guardados = localStorage.getItem(llave);
+    d = guardados ? JSON.parse(guardados) : null;
+  } catch (e) {
+    d = null;
+  }
+
+  if (!d) {
+    try {
+      const respuesta = await fetch(base + "Datos/productos.json");
+      if (!respuesta.ok)
+        throw new Error("No se pudo cargar el catálogo inicial");
+      d = await respuesta.json();
+    } catch (e) {
+      d = clonar(inicio);
+    }
+  }
+
+  const resultado = normalizarDatos(d);
+  guardar(resultado.datos);
 }
 
 let carrito = [];
@@ -133,11 +256,28 @@ function mostrarCarrito() {
     `,
       )
       .join("") || "<p>Carrito vacío</p>";
+  calcularTotal();
 }
 
 function quitar(idTemporal) {
   carrito = carrito.filter((x) => x.idTemporal !== idTemporal);
   mostrarCarrito();
+}
+
+function agregarDesdeCatalogo(id) {
+  const p = datos().productos.find((x) => x.id === id);
+  if (!p) return avisar("Producto no encontrado");
+  if (p.stock < 1) return avisar("Sin existencias de este producto");
+
+  carrito.push({
+    idTemporal: Date.now() + Math.random(),
+    descripcion: p.nombre,
+    precioUnitario: p.precio,
+    elementosBase: [p.id],
+    cantidad: 1,
+  });
+  mostrarCarrito();
+  avisar(`¡${p.nombre} agregado al carrito!`);
 }
 
 function costo(z) {
@@ -147,23 +287,96 @@ function costo(z) {
   );
 }
 
+function calcularTotal() {
+  const subtotal = carrito.reduce(
+    (suma, item) => suma + item.precioUnitario * item.cantidad,
+    0,
+  );
+  const zona = document.getElementById("zona");
+  const envio = zona ? costo(zona.value) : 0;
+  const resumen = document.getElementById("resumen-total");
+  if (!resumen) return;
+
+  resumen.classList.toggle("d-none", carrito.length === 0);
+  if (carrito.length) {
+    document.getElementById("lbl-subtotal").textContent = precio(subtotal);
+    document.getElementById("lbl-envio").textContent = precio(envio);
+    document.getElementById("lbl-total").textContent = precio(subtotal + envio);
+  }
+}
+
+function actualizarValidacion(campo) {
+  if (!campo) return;
+  const mostrarEstado = campo.value.trim() !== "" || campo.required;
+  campo.classList.toggle("is-valid", mostrarEstado && campo.checkValidity());
+  campo.classList.toggle("is-invalid", mostrarEstado && !campo.checkValidity());
+}
+
+function configurarFormularioCompra() {
+  const form = document.getElementById("compra");
+  const zona = document.getElementById("zona");
+  const direccion = document.getElementById("direccion");
+  const etiquetaDireccion = document.getElementById("etiqueta-direccion");
+  if (!form || !zona || !direccion) return;
+
+  const actualizarEntrega = () => {
+    const requiereDireccion = zona.value !== "Retiro en tienda";
+    direccion.required = requiereDireccion;
+    etiquetaDireccion.textContent = requiereDireccion
+      ? "Dirección de entrega"
+      : "Dirección (opcional)";
+    actualizarValidacion(direccion);
+    calcularTotal();
+  };
+
+  form.querySelectorAll("input").forEach((campo) => {
+    campo.addEventListener("input", () => actualizarValidacion(campo));
+    campo.addEventListener("blur", () => actualizarValidacion(campo));
+  });
+  zona.addEventListener("change", actualizarEntrega);
+  actualizarEntrega();
+}
+
+function validarContacto(contacto) {
+  if (!/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s'-]+$/.test(contacto.nombre))
+    return "Ingresa un nombre válido.";
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contacto.correo))
+    return "Ingresa un correo válido.";
+  if (!/^\d{4}-\d{4}$/.test(contacto.telefono))
+    return "El teléfono debe tener el formato 7777-7777.";
+  return "";
+}
+
 function comprar(e) {
   e.preventDefault();
-  let err = pedido(
-    "Cliente",
-    carrito,
-    document.getElementById("zona").value,
-    document.getElementById("direccion").value,
-  );
+  const form = e.currentTarget;
+  const contacto = {
+    nombre: document.getElementById("cli-nombre").value.trim(),
+    correo: document.getElementById("cli-correo").value.trim().toLowerCase(),
+    telefono: document.getElementById("cli-telefono").value.trim(),
+  };
+  const zona = document.getElementById("zona").value;
+  const direccion = document.getElementById("direccion").value.trim();
+  const errorContacto = validarContacto(contacto);
+  if (!form.checkValidity() || errorContacto) {
+    form.classList.add("was-validated");
+    return avisar(
+      errorContacto || "Completa correctamente los datos del pedido.",
+    );
+  }
+
+  let err = pedido(contacto, carrito, zona, direccion, sesion()?.correo);
   if (err) return avisar(err);
   carrito = [];
   avisar("Pedido registrado exitosamente");
   location.reload();
 }
 
-function pedido(cliente, items, z, dir) {
+function pedido(contacto, items, z, dir, usuarioCorreo) {
   let d = datos();
   if (!items.length) return "Agrega productos al carrito";
+  const errorContacto = validarContacto(contacto);
+  if (errorContacto) return errorContacto;
   if (z !== "Retiro en tienda" && !dir.trim()) return "Falta dirección";
 
   // 1. Sumar cuánto se necesita de cada ingrediente en TODO el pedido.
@@ -204,7 +417,12 @@ function pedido(cliente, items, z, dir) {
 
   d.pedidos.push({
     id: d.numero++,
-    cliente,
+    cliente: contacto.nombre,
+    correo: contacto.correo,
+    telefono: contacto.telefono,
+    usuarioCorreo: String(usuarioCorreo || contacto.correo)
+      .trim()
+      .toLowerCase(),
     items: detalle,
     consumos: demanda,
     total: Math.round((subtotal + costo(z)) * 100) / 100,
@@ -256,7 +474,7 @@ function formatearFecha(iso) {
 }
 
 function ordenarProductos(lista) {
-  const orden = { base: 0, ingrediente: 1, cubierta: 2 };
+  const orden = { base: 0, ingrediente: 1, cubierta: 2, prearmada: 3 };
   return lista
     .slice()
     .sort(
@@ -402,6 +620,40 @@ function cambiarEstado(id, nuevo) {
   contenido();
 }
 
+function normalizarCorreo(correo) {
+  return String(correo || "")
+    .trim()
+    .toLowerCase();
+}
+
+function esPedidoDelUsuario(pedido, usuario) {
+  const correoUsuario = normalizarCorreo(usuario?.correo);
+  if (!correoUsuario) return false;
+
+  const propietario = normalizarCorreo(pedido.usuarioCorreo);
+  if (propietario) return propietario === correoUsuario;
+
+  // Compatibilidad con pedidos creados antes de guardar una identidad de sesión.
+  const correoContacto = normalizarCorreo(pedido.correo);
+  return correoContacto
+    ? correoContacto === correoUsuario
+    : pedido.cliente === usuario.nombre;
+}
+
+function actualizarMisPedidos() {
+  const usuario = sesion();
+  const badge = document.getElementById("badge-pedidos");
+  if (!badge || usuario?.rol !== "cliente") return;
+
+  const activos = datos().pedidos.filter(
+    (pedido) =>
+      esPedidoDelUsuario(pedido, usuario) &&
+      ["Pendiente", "En preparación"].includes(pedido.estado),
+  );
+  badge.textContent = activos.length;
+  badge.classList.toggle("d-none", activos.length === 0);
+}
+
 function contenido() {
   let p = document.body.dataset.pagina,
     a = document.getElementById("contenido"),
@@ -423,9 +675,35 @@ function contenido() {
     let bases = d.productos.filter((x) => x.categoria === "base");
     let ingredientes = d.productos.filter((x) => x.categoria === "ingrediente");
     let cubiertas = d.productos.filter((x) => x.categoria === "cubierta");
+    let prearmadas = d.productos.filter((x) => x.categoria === "prearmada");
+    const u = sesion();
 
     a.innerHTML = `
-            <h1 class="titulo mb-4">Arma tu Crepa</h1>
+            <section class="mb-5" aria-labelledby="titulo-catalogo">
+                <h1 id="titulo-catalogo" class="titulo mb-4">Catálogo de crepas</h1>
+                <div class="row g-4">
+                    ${prearmadas
+                      .map(
+                        (c) => `
+                                <div class="col-sm-6 col-lg-4">
+                                    <article class="card catalogo-card h-100 overflow-hidden">
+                                        <div class="catalogo-top-bg" aria-hidden="true">${escapar(c.emoji || "🥞")}</div>
+                                        <div class="card-body d-flex flex-column">
+                                            <h2 class="h5 card-title fw-bold">${escapar(c.nombre)}</h2>
+                                            <p class="text-muted small">${c.stock > 0 ? `Disponibles: ${c.stock}` : "Agotada"}</p>
+                                            <div class="d-flex justify-content-between align-items-center mt-auto gap-2">
+                                                <span class="fs-5 fw-bold">${precio(c.precio)}</span>
+                                                <button type="button" class="btn btn-crepa btn-sm rounded-pill px-3" onclick="agregarDesdeCatalogo(${c.id})" ${c.stock > 0 ? "" : "disabled"}>Agregar</button>
+                                            </div>
+                                        </div>
+                                    </article>
+                                </div>`,
+                      )
+                      .join("")}
+                </div>
+            </section>
+
+            <h2 class="titulo mb-4">Arma tu Crepa</h2>
             <div class="row g-4">
                 <div class="col-md-7">
                     <form id="form-crepa" class="card p-4 shadow-sm border-0">
@@ -458,11 +736,35 @@ function contenido() {
                     <div class="card p-4 shadow-sm border-0">
                         <h3>Mi Carrito</h3>
                         <div id="carrito"></div>
-                        <form id="compra" class="mt-4">
-                            <label for="zona">Entrega</label>
+
+                        <div id="resumen-total" class="mt-3 border-top pt-3 d-none" aria-live="polite">
+                            <div class="d-flex justify-content-between mb-1 text-muted small"><span>Subtotal:</span><span id="lbl-subtotal">$0.00</span></div>
+                            <div class="d-flex justify-content-between mb-2 text-muted small"><span>Costo de envío:</span><span id="lbl-envio">$0.00</span></div>
+                            <div class="d-flex justify-content-between fs-5 fw-bold"><span>Total a pagar:</span><span id="lbl-total" class="text-success">$0.00</span></div>
+                        </div>
+
+                        <form id="compra" class="mt-4" novalidate>
+                            <h4 class="h5 mb-3">Datos de contacto</h4>
+                            <div class="mb-3">
+                                <label for="cli-nombre" class="form-label">Nombre completo</label>
+                                <input type="text" id="cli-nombre" class="form-control" value="${escapar(u?.nombre || "")}" autocomplete="name" required pattern="[A-Za-zÁÉÍÓÚáéíóúÑñ '-]+">
+                                <div class="invalid-feedback">Ingresa solo letras, espacios, apóstrofes o guiones.</div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="cli-correo" class="form-label">Correo electrónico</label>
+                                <input type="email" id="cli-correo" class="form-control" value="${escapar(u?.correo || "")}" autocomplete="email" required>
+                                <div class="invalid-feedback">Ingresa un correo válido.</div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="cli-telefono" class="form-label">Teléfono</label>
+                                <input type="tel" id="cli-telefono" class="form-control" placeholder="7777-7777" autocomplete="tel" required pattern="[0-9]{4}-[0-9]{4}">
+                                <div class="invalid-feedback">Usa el formato 7777-7777.</div>
+                            </div>
+                            <label for="zona" class="form-label">Entrega</label>
                             <select id="zona" class="form-select mb-3">${zonas()}</select>
-                            <label for="direccion">Dirección</label>
-                            <input id="direccion" class="form-control mb-3">
+                            <label id="etiqueta-direccion" for="direccion" class="form-label">Dirección de entrega</label>
+                            <input id="direccion" class="form-control mb-3" autocomplete="street-address">
+                            <div class="invalid-feedback">Ingresa una dirección para la entrega.</div>
                             <button class="btn btn-success w-100 fw-bold">Confirmar Pedido</button>
                         </form>
                     </div>
@@ -475,13 +777,15 @@ function contenido() {
     actualizarVistaCrepa();
     document.getElementById("form-crepa").onsubmit = armarCrepa;
     document.getElementById("compra").onsubmit = comprar;
+    configurarFormularioCompra();
   }
 
   if (p === "mis") {
+    const usuario = sesion();
     a.innerHTML = `<h1 class="titulo">Mis pedidos</h1>
             ${
               d.pedidos
-                .filter((x) => x.cliente === "Cliente")
+                .filter((x) => esPedidoDelUsuario(x, usuario))
                 .sort((a, b) => b.id - a.id)
                 .map(
                   (x) => `
@@ -621,6 +925,7 @@ function contenido() {
                                         <option value="base">Base</option>
                                         <option value="ingrediente">Ingrediente</option>
                                         <option value="cubierta">Cubierta</option>
+                                        <option value="prearmada">Crepa prearmada</option>
                                     </select>
                                 </div>
                                 <div class="row">
@@ -812,7 +1117,7 @@ function contenido() {
                                 (x) => `
                             <tr>
                                 <td>#${x.id}</td>
-                                <td>${escapar(x.cliente)}</td>
+                                <td>${escapar(x.cliente)}${x.correo ? `<br><span class="text-muted small">${escapar(x.correo)}</span>` : ""}${x.telefono ? `<br><span class="text-muted small">${escapar(x.telefono)}</span>` : ""}</td>
                                 <td class="small">${formatearFecha(x.fecha)}</td>
                                 <td>${escapar(x.entrega)}${x.direccion ? `<br><span class="text-muted small">${escapar(x.direccion)}</span>` : ""}</td>
                                 <td class="small">${x.items.map((i) => escapar(i.nombre) + " x" + i.cantidad).join("<br>")}</td>
@@ -959,7 +1264,9 @@ function imprimirReporte(tipo) {
 }
 
 // Inicializar
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
+  await inicializarDatos();
   menu();
   contenido();
+  actualizarMisPedidos();
 })

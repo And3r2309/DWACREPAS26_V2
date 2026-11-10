@@ -1,5 +1,12 @@
 function sesion() {
-    try { return JSON.parse(localStorage.getItem('crepaUsuario')); }
+    try {
+        const usuario = JSON.parse(localStorage.getItem('crepaUsuario'));
+        if (usuario?.rol === 'cliente' && !usuario.correo) {
+            usuario.correo = 'cliente@gmail.com';
+            localStorage.setItem('crepaUsuario', JSON.stringify(usuario));
+        }
+        return usuario;
+    }
     catch (e) { return null; }
 }
 
@@ -9,8 +16,8 @@ function entrar(e) {
     let clave = document.getElementById('clave').value.trim();
     let u = null;
 
-    if (correo === 'admin@crepasvibes.com' && clave === '1234') u = { rol: 'admin', nombre: 'Administrador' };
-    if (correo === 'cliente@gmail.com' && clave === 'cliente') u = { rol: 'cliente', nombre: 'Cliente' };
+    if (correo === 'admin@crepasvibes.com' && clave === '1234') u = { rol: 'admin', nombre: 'Administrador', correo };
+    if (correo === 'cliente@gmail.com' && clave === 'cliente') u = { rol: 'cliente', nombre: 'Cliente', correo };
 
     if (!u) return avisar('Datos incorrectos');
 

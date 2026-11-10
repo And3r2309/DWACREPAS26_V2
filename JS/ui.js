@@ -26,7 +26,12 @@ function menu() {
                     </button>
                     <div id="links" class="collapse navbar-collapse">
                         <div class="navbar-nav ms-auto align-items-center">
-                            ${l.map(x => `<a class="nav-link text-white" href="${base + x[0]}">${x[1]}</a>`).join('')}
+                            ${l.map(x => {
+                                const contador = x[1] === 'Mis pedidos'
+                                    ? ' <span id="badge-pedidos" class="badge bg-danger rounded-pill d-none">0</span>'
+                                    : '';
+                                return `<a class="nav-link text-white" href="${base + x[0]}">${x[1]}${contador}</a>`;
+                            }).join('')}
                             ${u ? `<button type="button" class="btn btn-outline-light btn-sm ms-lg-3 mt-2 mt-lg-0" onclick="salir()">Salir</button>` : ''}
                         </div>
                     </div>
