@@ -57,7 +57,7 @@ const inicio = {
       stock: 15,
       min: 5,
       categoria: "prearmada",
-      emoji: "🍌",
+      imagen: "IMG/NUTELLAYGUINEO.jpg",
     },
     {
       id: 8,
@@ -66,7 +66,7 @@ const inicio = {
       stock: 12,
       min: 5,
       categoria: "prearmada",
-      emoji: "🍓",
+      imagen: "IMG/NUTELLAFRESA.jpg",
     },
     {
       id: 9,
@@ -75,7 +75,7 @@ const inicio = {
       stock: 10,
       min: 5,
       categoria: "prearmada",
-      emoji: "🍫",
+      imagen: "IMG/CREPACHOCOLATE.jpg",
     },
     {
       id: 10,
@@ -84,7 +84,7 @@ const inicio = {
       stock: 9,
       min: 5,
       categoria: "prearmada",
-      emoji: "🍎",
+      imagen: "IMG/CREPAMANZANA.jpg",
     },
     {
       id: 11,
@@ -93,7 +93,7 @@ const inicio = {
       stock: 8,
       min: 5,
       categoria: "prearmada",
-      emoji: "🍪",
+      imagen: "IMG/CREPAOREO.jpg",
     },
     {
       id: 12,
@@ -102,7 +102,7 @@ const inicio = {
       stock: 20,
       min: 5,
       categoria: "prearmada",
-      emoji: "🥞",
+      imagen: "IMG/CREPACLASICA.jpg",
     },
   ],
   pedidos: [],
@@ -132,6 +132,22 @@ function normalizarDatos(d) {
     d.movimientos = [];
     cambio = true;
   }
+
+  // Agrega rutas de fotos al catálogo que ya estaba guardado en el navegador.
+  // Así no es necesario borrar pedidos ni inventario existentes para verlas.
+  inicio.productos
+    .filter((producto) => producto.imagen)
+    .forEach((plantilla) => {
+      const producto = d.productos.find(
+        (actual) =>
+          actual.categoria === "prearmada" &&
+          (actual.id === plantilla.id || actual.nombre === plantilla.nombre),
+      );
+      if (producto && !producto.imagen) {
+        producto.imagen = plantilla.imagen;
+        cambio = true;
+      }
+    });
 
   // Migra el catálogo una sola vez para no restaurar productos que
   // administración haya eliminado intencionalmente después de la migración.
@@ -687,7 +703,9 @@ function contenido() {
                         (c) => `
                                 <div class="col-sm-6 col-lg-4">
                                     <article class="card catalogo-card h-100 overflow-hidden">
-                                        <div class="catalogo-top-bg" aria-hidden="true">${escapar(c.emoji || "🥞")}</div>
+                                        <div class="catalogo-top-bg">
+                                            <img class="catalogo-imagen" src="${base}${escapar(c.imagen)}" alt="${escapar(c.nombre)}" loading="lazy">
+                                        </div>
                                         <div class="card-body d-flex flex-column">
                                             <h2 class="h5 card-title fw-bold">${escapar(c.nombre)}</h2>
                                             <p class="text-muted small">${c.stock > 0 ? `Disponibles: ${c.stock}` : "Agotada"}</p>
@@ -1269,4 +1287,4 @@ document.addEventListener("DOMContentLoaded", async () => {
   menu();
   contenido();
   actualizarMisPedidos();
-})
+});

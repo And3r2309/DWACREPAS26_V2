@@ -1,17 +1,107 @@
 {
   "productos": [
-    { "id": 1, "nombre": "Base Tradicional", "precio": 2.5, "stock": 50, "min": 10, "categoria": "base" },
-    { "id": 2, "nombre": "Base Avena", "precio": 3, "stock": 40, "min": 10, "categoria": "base" },
-    { "id": 3, "nombre": "Fresa", "precio": 0.5, "stock": 30, "min": 5, "categoria": "ingrediente" },
-    { "id": 4, "nombre": "Plátano", "precio": 0.5, "stock": 30, "min": 5, "categoria": "ingrediente" },
-    { "id": 5, "nombre": "Nutella", "precio": 1, "stock": 20, "min": 5, "categoria": "cubierta" },
-    { "id": 6, "nombre": "Lechera", "precio": 0.75, "stock": 20, "min": 5, "categoria": "cubierta" },
-    { "id": 7, "nombre": "Crepa Nutella + Guineo", "precio": 2, "stock": 15, "min": 5, "categoria": "prearmada", "emoji": "🍌" },
-    { "id": 8, "nombre": "Crepa Nutella + Fresas", "precio": 2.5, "stock": 12, "min": 5, "categoria": "prearmada", "emoji": "🍓" },
-    { "id": 9, "nombre": "Crepa Chocolate", "precio": 2.25, "stock": 10, "min": 5, "categoria": "prearmada", "emoji": "🍫" },
-    { "id": 10, "nombre": "Crepa de Manzana", "precio": 2.75, "stock": 9, "min": 5, "categoria": "prearmada", "emoji": "🍎" },
-    { "id": 11, "nombre": "Crepa de Oreo", "precio": 3, "stock": 8, "min": 5, "categoria": "prearmada", "emoji": "🍪" },
-    { "id": 12, "nombre": "Crepa Clásica", "precio": 1.75, "stock": 20, "min": 5, "categoria": "prearmada", "emoji": "🥞" }
+    {
+      "id": 1,
+      "nombre": "Base Tradicional",
+      "precio": 2.5,
+      "stock": 50,
+      "min": 10,
+      "categoria": "base"
+    },
+    {
+      "id": 2,
+      "nombre": "Base Avena",
+      "precio": 3,
+      "stock": 40,
+      "min": 10,
+      "categoria": "base"
+    },
+    {
+      "id": 3,
+      "nombre": "Fresa",
+      "precio": 0.5,
+      "stock": 30,
+      "min": 5,
+      "categoria": "ingrediente"
+    },
+    {
+      "id": 4,
+      "nombre": "Plátano",
+      "precio": 0.5,
+      "stock": 30,
+      "min": 5,
+      "categoria": "ingrediente"
+    },
+    {
+      "id": 5,
+      "nombre": "Nutella",
+      "precio": 1,
+      "stock": 20,
+      "min": 5,
+      "categoria": "cubierta"
+    },
+    {
+      "id": 6,
+      "nombre": "Lechera",
+      "precio": 0.75,
+      "stock": 20,
+      "min": 5,
+      "categoria": "cubierta"
+    },
+    {
+      "id": 7,
+      "nombre": "Crepa Nutella + Guineo",
+      "precio": 2,
+      "stock": 15,
+      "min": 5,
+      "categoria": "prearmada",
+      "imagen": "IMG/NUTELLAYGUINEO.jpg"
+    },
+    {
+      "id": 8,
+      "nombre": "Crepa Nutella + Fresas",
+      "precio": 2.5,
+      "stock": 12,
+      "min": 5,
+      "categoria": "prearmada",
+      "imagen": "IMG/NUTELLAFRESA.jpg"
+    },
+    {
+      "id": 9,
+      "nombre": "Crepa Chocolate",
+      "precio": 2.25,
+      "stock": 10,
+      "min": 5,
+      "categoria": "prearmada",
+      "imagen": "IMG/CREPACHOCOLATE.jpg"
+    },
+    {
+      "id": 10,
+      "nombre": "Crepa de Manzana",
+      "precio": 2.75,
+      "stock": 9,
+      "min": 5,
+      "categoria": "prearmada",
+      "imagen": "IMG/CREPAMANZANA.jpg"
+    },
+    {
+      "id": 11,
+      "nombre": "Crepa de Oreo",
+      "precio": 3,
+      "stock": 8,
+      "min": 5,
+      "categoria": "prearmada",
+      "imagen": "IMG/CREPAOREO.jpg"
+    },
+    {
+      "id": 12,
+      "nombre": "Crepa Clásica",
+      "precio": 1.75,
+      "stock": 20,
+      "min": 5,
+      "categoria": "prearmada",
+      "imagen": "IMG/CREPACLASICA.jpg"
+    }
   ],
   "pedidos": [],
   "movimientos": [],
