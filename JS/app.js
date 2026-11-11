@@ -115,6 +115,7 @@ function clonar(valor) {
   return JSON.parse(JSON.stringify(valor));
 }
 
+
 function normalizarDatos(d) {
   let cambio = false;
   if (!d || typeof d !== "object" || Array.isArray(d)) {
@@ -132,6 +133,12 @@ function normalizarDatos(d) {
     d.movimientos = [];
     cambio = true;
   }
+  if (!Array.isArray(d.historialEliminados)) {
+    d.historialEliminados = [];
+    cambio = true;
+  }
+
+
 
   // Agrega rutas de fotos al catálogo que ya estaba guardado en el navegador.
   // Así no es necesario borrar pedidos ni inventario existentes para verlas.
@@ -583,15 +590,74 @@ function guardarProducto(e) {
 function eliminarProducto(id) {
   let d = datos();
   let p = d.productos.find((x) => x.id === id);
+
   if (!p) return;
-  if (!confirm(`¿Eliminar "${p.nombre}"? Esta acción no se puede deshacer.`))
-    return;
+
+  if (!confirm(`¿Eliminar "${p.nombre}"?`)) return;
+
+  // Crear historial si no existe
+  if (!Array.isArray(d.historialEliminados)) {
+    d.historialEliminados = [];
+  }
+
+  // Guardar producto eliminado con fecha y hora
+  d.historialEliminados.push({
+    ...p,
+    fechaEliminacion: new Date().toISOString()
+  });
+
+  // Eliminar producto de la lista activa
   d.productos = d.productos.filter((x) => x.id !== id);
+
+  // Guardar cambios
   guardar(d);
+
+  // Actualizar pantalla
   contenido();
+
+  avisar("Producto guardado en el historial de eliminados");
 }
 
 // ---------- Inventario: reabastecer ----------
+
+function restaurarProducto(id, fechaEliminacion) {
+  let d = datos();
+
+  let posicion = d.historialEliminados.findIndex(
+    (x) => x.id === id && x.fechaEliminacion === fechaEliminacion
+  );
+
+  if (posicion === -1) {
+    return avisar("No se encontró el producto en el historial");
+  }
+
+  let producto = d.historialEliminados[posicion];
+
+  if (!confirm(`¿Restaurar "${producto.nombre}"?`)) return;
+
+  // Evitar que dos productos tengan el mismo ID
+  let idOcupado = d.productos.some((x) => x.id === producto.id);
+
+  let productoRestaurado = { ...producto };
+  delete productoRestaurado.fechaEliminacion;
+
+  if (idOcupado) {
+    productoRestaurado.id =
+      Math.max(0, ...d.productos.map((x) => Number(x.id) || 0)) + 1;
+  }
+
+  // Regresar el producto al inventario
+  d.productos.push(productoRestaurado);
+
+  // Quitar el registro del historial
+  d.historialEliminados.splice(posicion, 1);
+
+  guardar(d);
+  contenido();
+
+  avisar("Producto restaurado correctamente");
+}
+
 
 function reabastecer(id) {
   let input = document.getElementById("cant-" + id);
@@ -681,7 +747,9 @@ function contenido() {
   }
   if (p === "inicio") return;
   if (
-    ["resumen", "productos", "inventario", "ventas", "pedidos"].includes(p) &&
+    
+["resumen", "productos", "inventario", "ventas", "pedidos", "historial"].includes(p)
+ &&
     !revisar("admin")
   )
     return;
@@ -972,6 +1040,52 @@ function contenido() {
     document.getElementById("form-producto").onsubmit = guardarProducto;
   }
 
+
+  if (p === "historial") {
+    let eliminados = (d.historialEliminados || []).slice().reverse();
+
+    a.innerHTML = `
+      <h1 class="titulo mb-4">Historial de eliminados</h1>
+      <p class="text-muted">
+        Aquí puedes ver los productos eliminados y la fecha en que se eliminaron.
+      </p>
+
+      <div class="table-responsive">
+        <table class="table align-middle">
+          <thead>
+            <tr>
+              <th>Producto</th>
+              <th>Categoría</th>
+              <th>Precio</th>
+              <th>Fecha de eliminación</th>
+              <th>Acción</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${
+              eliminados.length
+                ? eliminados.map((x) => `
+                  <tr>
+                    <td>${escapar(x.nombre)}</td>
+                    <td>${escapar(capitalizar(x.categoria))}</td>
+                    <td>${precio(x.precio)}</td>
+                    <td>${formatearFecha(x.fechaEliminacion)}</td>
+                    <td>
+                      <button class="btn btn-sm btn-outline-success"
+                        onclick="restaurarProducto(${x.id}, '${x.fechaEliminacion}')">
+                        Restaurar
+                      </button>
+                    </td>
+                  </tr>
+                `).join("")
+                : '<tr><td colspan="5" class="text-center text-muted">No hay productos eliminados.</td></tr>'
+            }
+          </tbody>
+        </table>
+      </div>`;
+  }
+
+
   if (p === "inventario") {
     let bajo = d.productos.filter((x) => x.stock <= x.min);
     a.innerHTML = `
@@ -1189,7 +1303,8 @@ function descargarCSV(nombre, filas) {
               '"' +
               String(v ?? "")
                 .replace(/"/g, '""')
-                .replace(/^[=+@\-\t\r]/, "'// Inicializar") +
+                .replace(/^[=+@\-\t\r]/, "'") +
+
               '"',
           )
           .join(";"),

@@ -10,7 +10,8 @@ function zonas() { return ['Retiro en tienda', 'Santa Tecla', 'Ciudad Merliot', 
 function menu() {
     let u = sesion();
     let l = u?.rol === 'admin'
-        ? [['ADMIN/dashboard.html', 'Resumen'], ['ADMIN/productos.html', 'Productos'], ['ADMIN/inventario.html', 'Inventario'], ['ADMIN/ventas.html', 'Ventas'], ['ADMIN/pedidos.html', 'Pedidos']]
+        
+? [['ADMIN/dashboard.html', 'Resumen'], ['ADMIN/productos.html', 'Productos'], ['ADMIN/inventario.html', 'Inventario'], ['ADMIN/ventas.html', 'Ventas'], ['ADMIN/pedidos.html', 'Pedidos'], ['ADMIN/historial.html', 'Historial de eliminados']]
         : u?.rol === 'cliente'
             ? [['CLIENTE/tienda.html', 'Armar Crepa'], ['CLIENTE/mis-pedidos.html', 'Mis pedidos']]
             : [['index.html', 'Inicio'], ['login.html', 'Ingresar']];
